@@ -38,8 +38,8 @@ const MOCK_USER: LearnerProfile = {
   language: 'en',
   level: 'intermediate',
   dailyGoalMinutes: 30,
-  totalStudyMinutes: 1240,
-  streakDays: 7,
+  totalStudyMinutes: 0,
+  streakDays: 0,
   joinedAt: '2026-08-01',
 };
 

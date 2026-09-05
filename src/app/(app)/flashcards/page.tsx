@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, RotateCcw, Layers, ArrowRight, ArrowLeft, Brain, Sparkles, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
+import BackButton from "@/components/ui/BackButton";
 
 interface Flashcard {
   id: number;
@@ -24,85 +25,85 @@ interface Deck {
 
 const DECKS: Deck[] = [
   {
-    id: "nn-core",
-    title: "Neural Networks & Deep Learning",
-    subject: "Computer Science",
+    id: "cells-life",
+    title: "Grade 10 Science: Cells & Life",
+    subject: "Biology",
     cardCount: 5,
     dueCount: 5,
-    masteryPct: 78,
+    masteryPct: 0,
     cards: [
       { 
         id: 1, 
-        front: "What is a Neuron (Perceptron) in a Neural Network?", 
-        back: "The fundamental computational unit that receives weighted inputs, adds a bias term, and passes the sum through an activation function: a = σ(∑ w_i x_i + b).",
-        hint: "Think of an assembly station with inputs and an activation threshold.",
-        topic: "Architecture"
+        front: "What is photosynthesis?", 
+        back: "Photosynthesis is how plants make their own food. They use sunlight, water, and carbon dioxide to produce sugar (glucose) and oxygen.",
+        hint: "Think of a plant making breakfast from light, water, and air.",
+        topic: "Plants"
       },
       { 
         id: 2, 
-        front: "What does the Backpropagation algorithm compute?", 
-        back: "The partial derivatives of the loss function with respect to every weight and bias in the network (∂L/∂W) using the chain rule backwards.",
-        hint: "Calculus chain rule moving from output back to input.",
-        topic: "Learning"
+        front: "Which part of the plant cell does photosynthesis?", 
+        back: "The chloroplasts. They contain chlorophyll, the green pigment that captures energy from sunlight.",
+        hint: "Take a guess — it turns green.",
+        topic: "Cells"
       },
       { 
         id: 3, 
-        front: "What is the primary role of an Activation Function?", 
-        back: "To inject non-linearity into the network, enabling it to approximate arbitrary non-linear functions (Universal Approximation Theorem).",
-        hint: "Without it, deep networks collapse into a single linear matrix.",
-        topic: "Activations"
+        front: "Why do leaves look green?", 
+        back: "Because chlorophyll absorbs red and blue light for energy and reflects green light back to your eyes.",
+        hint: "The color you see is the light the leaf does NOT use.",
+        topic: "Plants"
       },
       { 
         id: 4, 
-        front: "Why does ReLU help prevent Vanishing Gradients?", 
-        back: "For positive inputs (x > 0), the gradient of ReLU is a constant 1.0, which prevents the exponential decay of gradient signals across deep layers.",
-        hint: "Compare its constant slope to Sigmoid's maximum 0.25 slope.",
-        topic: "Activations"
+        front: "What is the main job of the cell membrane?", 
+        back: "It acts like a security gate — it controls what enters and leaves the cell while keeping the inside safe.",
+        hint: "Compare it to the walls and door of a house.",
+        topic: "Cells"
       },
       { 
         id: 5, 
-        front: "What is the difference between Batch, Mini-Batch, and Stochastic Gradient Descent?", 
-        back: "Batch uses the entire dataset per update; Stochastic uses 1 single sample; Mini-Batch balances GPU parallelization and gradient noise by using small subsets (e.g. 32–256).",
-        hint: "Think about the sample size used to calculate the gradient step.",
-        topic: "Optimization"
+        front: "What is cellular respiration?", 
+        back: "The process cells use to release energy from sugar using oxygen. It produces carbon dioxide and water — like a gentle fire inside cells.",
+        hint: "Think energy!",
+        topic: "Cells"
       }
     ]
   },
   {
-    id: "optimization",
-    title: "Loss Functions & Optimization",
-    subject: "Machine Learning",
+    id: "electricity",
+    title: "Physics: Electricity & Circuits",
+    subject: "Physics",
     cardCount: 4,
     dueCount: 4,
-    masteryPct: 62,
+    masteryPct: 0,
     cards: [
       {
         id: 6,
-        front: "What does Cross-Entropy Loss measure?",
-        back: "The divergence between the predicted probability distribution and the true one-hot ground-truth distribution: L = -∑ y_i log(p_i).",
-        hint: "Information theory and log-likelihood.",
-        topic: "Loss Functions"
+        front: "What is electric current?",
+        back: "The flow of electric charge (electrons) through a wire. It is measured in amperes (amps, A), like the flow of water in a pipe.",
+        hint: "How much electricity is flowing per second.",
+        topic: "Current"
       },
       {
         id: 7,
-        front: "What is the role of Momentum in Gradient Descent?",
-        back: "It dampens oscillations in steep directions and accelerates movement along persistent directions by adding a fraction of the previous update vector.",
-        hint: "A heavy ball rolling down a hilly terrain.",
-        topic: "Optimizers"
+        front: "What is voltage?",
+        back: "The 'push' that drives the current around a circuit, measured in volts (V). A bigger battery gives a bigger push.",
+        hint: "Think water pressure pushing water through a pipe.",
+        topic: "Voltage"
       },
       {
         id: 8,
-        front: "What is Overfitting and how is it detected?",
-        back: "When a model memorizes noise in the training set; detected when Training Loss continues to fall while Validation Loss begins to rise.",
-        hint: "Discrepancy between training and validation error curves.",
-        topic: "Generalization"
+        front: "What does a resistor do in a circuit?",
+        back: "It limits the flow of current. The higher the resistance, the smaller the current that can pass through.",
+        hint: "The water-pipe version: a narrow section slows the flow.",
+        topic: "Resistance"
       },
       {
         id: 9,
-        front: "What is the purpose of L2 Regularization (Weight Decay)?",
-        back: "Adds a penalty proportional to the squared magnitude of the weights (λ/2·||W||²) to the loss, discouraging complex, peaky weights.",
-        hint: "Penalizing large weight coefficients.",
-        topic: "Regularization"
+        front: "State Ohm's Law.",
+        back: "Current = Voltage ÷ Resistance, or I = V ÷ R. Bigger voltage means more current; bigger resistance means less current.",
+        hint: "It links the three key ideas of a circuit.",
+        topic: "Ohm's Law"
       }
     ]
   }
@@ -140,14 +141,15 @@ export default function FlashcardsPage() {
   if (!activeDeck) {
     return (
       <div className="max-w-5xl mx-auto p-8 pt-12 space-y-10">
+        <BackButton className="mb-2" />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-mono uppercase tracking-widest text-hexagon-accent bg-hexagon-accent/15 px-3 py-1 rounded-full border border-hexagon-accent/25">
-              Spaced Repetition System
+              Smart Revision
             </span>
             <h1 className="text-3xl font-bold text-hexagon-text-primary mt-2">Flashcard Decks</h1>
             <p className="text-hexagon-text-secondary text-sm mt-1">
-              Active recall calibrated with adaptive Leitner intervals.
+              Quick cards to help you remember what you learn.
             </p>
           </div>
 
@@ -175,13 +177,13 @@ export default function FlashcardsPage() {
                   </span>
                 </div>
                 <h2 className="text-lg font-bold text-white mb-1">{deck.title}</h2>
-                <p className="text-xs text-hexagon-text-secondary">{deck.cardCount} conceptual mastery flashcards</p>
+                <p className="text-xs text-hexagon-text-secondary">{deck.cardCount} revision flashcards</p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-gray-400">Mastery</span>
+                    <span className="text-gray-400">Score</span>
                     <span className="text-hexagon-accent font-bold">{deck.masteryPct}%</span>
                   </div>
                   <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
@@ -207,6 +209,7 @@ export default function FlashcardsPage() {
   if (completed) {
     return (
       <div className="max-w-xl mx-auto p-8 pt-16 flex flex-col items-center text-center space-y-6">
+        <BackButton className="self-start mb-2" />
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -310,14 +313,14 @@ export default function FlashcardsPage() {
             style={{ transform: 'rotateY(180deg)' }}
           >
             <div className="flex items-center justify-between text-xs text-gray-400">
-              <span className="font-mono uppercase text-[10px] bg-hexagon-accent/20 text-hexagon-accent px-2 py-0.5 rounded font-bold">Answer & Derivation</span>
+              <span className="font-mono uppercase text-[10px] bg-hexagon-accent/20 text-hexagon-accent px-2 py-0.5 rounded font-bold">Answer</span>
               <span className="text-[11px] text-gray-400 font-medium">Click to flip ↻</span>
             </div>
             <p className="text-lg font-medium text-center text-hexagon-text-primary px-4 leading-relaxed">
               {card.back}
             </p>
             <div className="text-center text-[11px] text-emerald-400 font-mono">
-              Rate your recall below to set next interval
+              Rate how well you remembered this card
             </div>
           </div>
         </motion.div>
@@ -326,7 +329,7 @@ export default function FlashcardsPage() {
       {/* SRS Rating Buttons (Always visible or prominent after flip) */}
       <div className="w-full pt-4 space-y-2">
         <p className="text-center text-xs text-gray-400 font-medium">
-          {flipped ? "Rate your recall ease:" : "Flip card to reveal answer and rate memory"}
+          {flipped ? "How well did you remember it?" : "Flip card to reveal the answer"}
         </p>
         <div className="grid grid-cols-4 gap-2 sm:gap-3">
           <button 

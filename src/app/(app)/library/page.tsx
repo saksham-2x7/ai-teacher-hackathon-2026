@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Book, FileText, UploadCloud, Search } from 'lucide-react';
 import DocumentUploader from '../../../components/home/DocumentUploader';
+import BackButton from "@/components/ui/BackButton";
 
 const RESOURCES = [
   { id: 1, title: "Physics Class 10 Textbook.pdf", type: "PDF", date: "Today" },
@@ -14,6 +15,7 @@ export default function LibraryPage() {
   const router = useRouter();
   return (
     <div className="max-w-6xl mx-auto p-8 pt-12 space-y-12">
+      <BackButton className="mb-2" />
       <header className="mb-8">
         <h1 className="text-3xl font-semibold text-hexagon-text-primary mb-2">Library</h1>
         <p className="text-hexagon-text-secondary">Your grounded materials and saved resources.</p>

@@ -13,7 +13,9 @@ import { useAIIntentStore } from '@/store/useAIIntentStore';
 import { useAudioLipSync } from '@/hooks/useAudioLipSync';
 import LiveAIEngine from '../../../components/shell/LiveAIEngine';
 import ProceduralAvatar from '../../../components/teacher/ProceduralAvatar';
-import { NeuralNetworkBoard } from '../../../components/teacher/NeuralNetworkBoard';
+import PolymorphicOrchestrator from '../../../components/orchestrator/PolymorphicOrchestrator';
+import { liveSSEClient, mapBackendTeacherState, mapBackendVisualType, mapInteractivePromptToQuestion } from '@/services/liveSSEClient';
+import { toFastAPILearnerProfile } from '@/utils/toFastAPILearnerProfile';
 
 type StageMode = 'CONVERSATION' | 'LECTURE';
 
@@ -37,7 +39,9 @@ export default function TutorPage() {
   const [mode, setMode] = useState<StageMode>('CONVERSATION');
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [weight, setWeight] = useState(1.0);
+  const [topic, setTopic] = useState(() => useAIIntentStore.getState().activeTopic);
+
+  const setActiveTopic = useAIIntentStore(s => s.setActiveTopic);
   
   const isMale = profile?.tutorGender === 'male';
   
@@ -68,17 +72,20 @@ export default function TutorPage() {
     if (!userText.trim()) return;
     
     setInput('');
-    const sessionId = sessionStorage.getItem('hexagon_session_id');
-    
-    if (!sessionId) {
-      console.warn("No session ID. Initializing local session...");
-      sessionStorage.setItem('hexagon_session_id', `session_local_${Date.now()}`);
-    }
-    
-    const activeSessionId = sessionStorage.getItem('hexagon_session_id');
+    useAIIntentStore.getState().setTeacherState('thinking', 'Thinking...');
+    setActiveTopic(topic.trim() || 'Photosynthesis');
+    useAIIntentStore.getState().setActiveQuestion(null);
 
-    if (activeSessionId) {
-      try {
+    // Use a real backend session when none exists yet (or only a stale local one)
+    let activeSessionId = sessionStorage.getItem('hexagon_session_id');
+    if (!activeSessionId || activeSessionId.startsWith('session_local_')) {
+      activeSessionId = await liveSSEClient.createSession(toFastAPILearnerProfile(profile, topic.trim() || 'Photosynthesis'));
+      if (activeSessionId.startsWith('session_local_')) {
+        console.warn('Backend unreachable — running in offline demo mode.');
+      }
+    }
+
+    try {
         const res = await fetch(`/api/v1/sessions/${activeSessionId}/interact`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -101,15 +108,23 @@ export default function TutorPage() {
               if (line.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(line.slice(6));
-                  const turnData = data.teaching_turn || data.turn || (data.message ? data : null);
+                  const turnData = data.teaching_turn || data.turn || (data.message ? data : data.spoken_text ? data : null);
                   if (turnData) {
-                    if (turnData.message) aiMessage = turnData.message;
-                    
+                    if (turnData.message || turnData.spoken_text) aiMessage = turnData.message || turnData.spoken_text;
+
                     useAIIntentStore.getState().setTeacherState(
-                      turnData.teacher_state || 'speaking',
+                      mapBackendTeacherState(turnData.teacher_state || turnData.state),
                       aiMessage
                     );
-                    
+
+                    if (data.visual_intent) {
+                      const repr = mapBackendVisualType(data.visual_intent.type);
+                      if (repr) useAIIntentStore.getState().setRepresentation(repr);
+                    }
+
+                    const question = mapInteractivePromptToQuestion(turnData.interactive_prompt);
+                    if (question) useAIIntentStore.getState().setActiveQuestion(question);
+
                     if (turnData.audio_url || turnData.audio_base64) {
                       const src = turnData.audio_url || `data:audio/mp3;base64,${turnData.audio_base64}`;
                       const audioEl = new Audio(src);
@@ -129,7 +144,6 @@ export default function TutorPage() {
         console.error('Failed to send interaction to backend:', e);
         useAIIntentStore.getState().setTeacherState('listening', '');
       }
-    }
   };
 
   return (
@@ -144,6 +158,52 @@ export default function TutorPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
+
+        {/* TOPIC PICKER — study any topic */}
+        <div className="hidden md:flex flex-col items-center gap-2 min-w-0 max-w-lg">
+          <div className="flex items-center gap-2 bg-black/30 backdrop-blur-xl border border-white/10 rounded-full pl-4 pr-2 py-1.5 w-full shadow-lg">
+            <span className="text-[11px] font-mono text-amber-300/80 tracking-wider uppercase shrink-0">Topic</span>
+            <input
+              list="topic-suggestions"
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              placeholder="e.g. Newton's Laws, World War 2..."
+              className="w-full bg-transparent text-sm text-white/90 placeholder-white/30 outline-none"
+            />
+            <datalist id="topic-suggestions">
+              <option value="Photosynthesis" />
+              <option value="Electricity & Circuits" />
+              <option value="Newton's Laws of Motion" />
+              <option value="Chemical Reactions" />
+              <option value="Solar System & Planets" />
+              <option value="World War 2" />
+              <option value="Fractions & Percentages" />
+              <option value="Computer Programming Basics" />
+            </datalist>
+            <button
+              onClick={() => setTopic('Photosynthesis')}
+              title="Reset topic"
+              className="shrink-0 px-3 py-1.5 rounded-full text-[10px] font-mono uppercase tracking-wider text-white/50 hover:text-white hover:bg-white/10 transition-all"
+            >
+              Reset
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap justify-center max-w-full">
+            {['Photosynthesis', 'Electricity & Circuits', 'Newton\'s Laws', 'Chemical Reactions', 'Solar System'].map(s => (
+              <button
+                key={s}
+                onClick={() => setTopic(s)}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-wide transition-all border ${
+                  topic === s
+                    ? 'bg-amber-400/20 border-amber-400/50 text-amber-200'
+                    : 'bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
       </header>
 
       {/* MAIN SPATIAL STAGE */}
@@ -192,7 +252,7 @@ export default function TutorPage() {
           )}
         </motion.div>
 
-        {/* INTERACTIVE LECTURE BOARD */}
+        {/* INTERACTIVE LESSON BOARD */}
         <motion.div
           layout
           initial={false}
@@ -205,11 +265,7 @@ export default function TutorPage() {
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
           <div className="w-full h-full p-2 relative">
-            <NeuralNetworkBoard 
-              demoState="evaluate_answer" 
-              weightValue={weight} 
-              onWeightChange={setWeight} 
-            />
+            <PolymorphicOrchestrator />
             {mode === 'CONVERSATION' && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/20 transition-colors pointer-events-none rounded-2xl">
                 <Maximize2 className="w-6 h-6 text-white drop-shadow-md" />

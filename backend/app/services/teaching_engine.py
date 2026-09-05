@@ -13,19 +13,6 @@ from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
-from google import genai
-from google.genai import types
-try:
-    from google.genai._api_client import BaseApiClient
-    if not hasattr(BaseApiClient, "_orig_aclose"):
-        BaseApiClient._orig_aclose = BaseApiClient.aclose
-        async def _safe_aclose(self):
-            if hasattr(self, "_async_httpx_client") and self._async_httpx_client:
-                await self._async_httpx_client.aclose()
-        BaseApiClient.aclose = _safe_aclose
-except Exception:
-    pass
-
 from app.schemas.interaction import PedagogicalState, InteractionTurn
 from app.repositories.session_repo import session_repo
 
@@ -38,6 +25,7 @@ from core.pedagogy.engine.router import AdaptiveRouter
 from core.pedagogy.engine.assembler import TeachingTurnAssembler
 
 from app.core.llm_client import generate_structured_output_async
+from app.core.config import settings
 
 async def mock_generate_teaching_turn(session_id: str, student_input: Optional[str] = None) -> AsyncGenerator[str, None]:
     """
@@ -59,6 +47,8 @@ async def mock_generate_teaching_turn(session_id: str, student_input: Optional[s
 
 
     topic = session.current_topic
+    # Optional per-student API key captured at session creation (X-API-Key header)
+    api_key = getattr(session, "api_key", None)
     app_profile = session.learner_profile
     from contracts.pedagogy.models import LearnerProfile as EngineProfile, EducationalLevel, LearningStyle
     if isinstance(app_profile, EngineProfile):
@@ -89,7 +79,8 @@ async def mock_generate_teaching_turn(session_id: str, student_input: Optional[s
                 system_instruction="You are a pedagogical evaluator assessing a student's answer.",
                 user_prompt=eval_prompt,
                 schema=PedagogicalEvaluation,
-                model='gemini-3.7-flash'
+                model=settings.DEFAULT_MODEL,
+                api_key=api_key
             )
         except Exception:
             evaluation = None
@@ -120,7 +111,8 @@ async def mock_generate_teaching_turn(session_id: str, student_input: Optional[s
             system_instruction=system_instruction,
             user_prompt="Generate the next teaching turn.",
             schema=TeachingTurn,
-            model='gemini-3.7-flash'
+            model=settings.DEFAULT_MODEL,
+            api_key=api_key
         )
     except Exception:
         teaching_turn = None

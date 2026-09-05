@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Clock, ArrowRight, CheckCircle2, XCircle, Award, RotateCcw, Brain, ShieldAlert, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import BackButton from "@/components/ui/BackButton";
 
 interface Question {
   id: number;
@@ -16,74 +17,74 @@ interface Question {
 const EXAM_QUESTIONS: Question[] = [
   {
     id: 1,
-    question: "What is the primary role of the activation function in a multilayer perceptron?",
+    question: "What does the battery do in a simple circuit?",
     options: [
-      "To accelerate the speed of the matrix dot product on GPUs",
-      "To introduce non-linearity so the network can learn complex boundary curves",
-      "To normalize the input vectors to have unit variance",
-      "To calculate the partial derivatives during backward propagation"
+      "It provides the voltage that pushes current around the circuit",
+      "It slows the current down",
+      "It turns the bulb on only in daylight",
+      "It measures how fast electrons move"
     ],
-    correctIndex: 1,
-    explanation: "Without non-linear activation functions, any composition of linear layers collapses into a single linear transformation, regardless of depth.",
-    topic: "Architecture & Activations"
+    correctIndex: 0,
+    explanation: "The battery provides the voltage (the 'push') that drives current around the circuit.",
+    topic: "Circuits"
   },
   {
     id: 2,
-    question: "How does the backpropagation algorithm compute gradients across chained hidden layers?",
+    question: "If resistance increases while the battery stays the same, what happens to the current?",
     options: [
-      "By applying the calculus Chain Rule backwards from loss to inputs",
-      "By brute-force gradient sampling at each epoch",
-      "By calculating the inverse Jacobian of the weight matrices",
-      "By randomly perturbing weights until loss decreases"
+      "The current stays the same",
+      "The current increases",
+      "The current decreases",
+      "The current stops permanently"
     ],
-    correctIndex: 0,
-    explanation: "Backpropagation applies the multivariate chain rule backwards through the computational graph, caching intermediate activations to compute ∂L/∂W.",
-    topic: "Backpropagation"
+    correctIndex: 2,
+    explanation: "Remember Ohm's Law: current = voltage ÷ resistance. Bigger resistance means a smaller current.",
+    topic: "Ohm's Law"
   },
   {
     id: 3,
-    question: "Why does the standard Sigmoid function suffer from the 'Vanishing Gradient' problem?",
+    question: "According to Ohm's Law, what does current (I) equal?",
     options: [
-      "Its derivative is zero everywhere except at x = 0",
-      "For large positive or negative inputs, its derivative approaches 0 (max derivative is only 0.25)",
-      "It produces negative outputs that cancel out positive gradients",
-      "It requires excessive memory in forward passes"
+      "Voltage ÷ Resistance",
+      "Resistance ÷ Voltage",
+      "Voltage × Resistance",
+      "Resistance − Voltage"
     ],
-    correctIndex: 1,
-    explanation: "Because σ'(x) = σ(x)(1 - σ(x)), the maximum derivative is 0.25. Multiplying many fractions < 0.25 across deep layers causes gradients to decay exponentially toward zero.",
-    topic: "Optimization"
+    correctIndex: 0,
+    explanation: "I = V ÷ R. Voltage (V) divided by resistance (R).",
+    topic: "Ohm's Law"
   },
   {
     id: 4,
-    question: "What does the Learning Rate (η) hyperparameter govern in Gradient Descent?",
+    question: "What is the unit used to measure electric current?",
     options: [
-      "The number of neurons allocated per hidden layer",
-      "The step size taken along the negative gradient direction during weight updates",
-      "The batch size used in mini-batch sampling",
-      "The probability of dropping out a unit during training"
+      "Volts (V)",
+      "Ohms (Ω)",
+      "Amperes (A)",
+      "Watts (W)"
     ],
-    correctIndex: 1,
-    explanation: "Weights are updated as W ← W - η·∇L. An excessively high η causes divergence, while an excessively low η causes sluggish convergence.",
-    topic: "Optimization"
+    correctIndex: 2,
+    explanation: "Current is measured in amperes (amps). Voltage is measured in volts and resistance in ohms.",
+    topic: "Current"
   },
   {
     id: 5,
-    question: "What is the key advantage of the ReLU activation function over Sigmoid?",
+    question: "Two bulbs are wired in series and one burns out. What happens to the other bulb?",
     options: [
-      "Its derivative is exactly 1 for all positive inputs, preventing gradient saturation",
-      "It maps all outputs to a bounded [0, 1] probability range",
-      "It eliminates the need for bias terms in dense layers",
-      "It makes the loss function strictly convex"
+      "It stays bright",
+      "It goes out too",
+      "It gets brighter",
+      "Nothing changes"
     ],
-    correctIndex: 0,
-    explanation: "For any x > 0, d/dx(ReLU) = 1. This constant gradient allows deep networks to propagate error signals across hundreds of layers without vanishing.",
-    topic: "Architecture & Activations"
+    correctIndex: 1,
+    explanation: "In a series circuit, current has only one path. Break the loop and no current flows at all.",
+    topic: "Circuits"
   }
 ];
 
 export default function ExamPage() {
   const [examState, setExamState] = useState<'intro' | 'active' | 'complete'>('intro');
-  const [subject, setSubject] = useState("Computer Science: Neural Networks");
+  const [subject, setSubject] = useState("Physics: Electricity & Circuits");
   const [difficulty, setDifficulty] = useState("Adaptive");
   const [targetDurationMinutes, setTargetDurationMinutes] = useState(15);
   
@@ -154,6 +155,7 @@ export default function ExamPage() {
   if (examState === 'intro') {
     return (
       <div className="max-w-4xl mx-auto p-8 pt-12 flex flex-col items-center text-center space-y-8">
+        <BackButton className="self-start mb-1" />
         <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 text-red-400 rounded-3xl flex items-center justify-center mb-2 shadow-xl shadow-red-500/5">
           <Target className="w-10 h-10" />
         </div>
@@ -164,7 +166,7 @@ export default function ExamPage() {
           </span>
           <h1 className="text-4xl font-bold text-hexagon-text-primary mt-3">Exam Arena</h1>
           <p className="text-hexagon-text-secondary text-base max-w-lg mt-2 mx-auto">
-            Test your mastery under pressure. The AI will dynamically evaluate your accuracy, speed, and conceptual depth.
+            Practice answering under a time limit. The AI checks your accuracy and speed, then tells you what to review.
           </p>
         </div>
         
@@ -178,9 +180,9 @@ export default function ExamPage() {
               onChange={e => setSubject(e.target.value)}
               className="w-full bg-background border border-hexagon-border rounded-xl px-4 py-3 text-hexagon-text-primary outline-none focus:border-hexagon-accent text-sm"
             >
-              <option>Computer Science: Neural Networks</option>
-              <option>Physics: Quantum Mechanics & Qubits</option>
-              <option>Machine Learning: Optimization Algorithms</option>
+              <option>Physics: Electricity & Circuits</option>
+              <option>Science: Photosynthesis</option>
+              <option>Chemistry: Chemical Reactions</option>
             </select>
           </div>
           
@@ -195,8 +197,8 @@ export default function ExamPage() {
                 className="w-full bg-background border border-hexagon-border rounded-xl px-4 py-3 text-hexagon-text-primary outline-none focus:border-hexagon-accent text-sm"
               >
                 <option>Adaptive</option>
-                <option>Hard</option>
-                <option>Extreme</option>
+                <option>Harder</option>
+                <option>Hardest</option>
               </select>
             </div>
             <div>
@@ -240,6 +242,7 @@ export default function ExamPage() {
 
     return (
       <div className="max-w-3xl mx-auto p-8 pt-10 space-y-6">
+        <BackButton className="mb-1" href="/home" />
         {/* Top Live Bar */}
         <div className="flex items-center justify-between bg-hexagon-surface border border-hexagon-border px-5 py-3 rounded-2xl backdrop-blur-md">
           <div className="flex items-center gap-3">
@@ -310,7 +313,7 @@ export default function ExamPage() {
             })}
           </div>
 
-          {/* Socratic Cognitive Explanation */}
+          {/* Answer Explanation */}
           <AnimatePresence>
             {showExplanation && (
               <motion.div 
@@ -323,7 +326,7 @@ export default function ExamPage() {
               >
                 <div className="font-bold flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
-                  {isCorrect ? 'Accurate Derivation!' : 'Cognitive Correction:'}
+                  {isCorrect ? 'Nice job!' : 'Not quite — here is why:'}
                 </div>
                 <p className="text-gray-300">{q.explanation}</p>
               </motion.div>
@@ -361,7 +364,7 @@ export default function ExamPage() {
 
       <div>
         <h1 className="text-3xl font-extrabold text-hexagon-text-primary">Exam Complete</h1>
-        <p className="text-hexagon-text-secondary text-sm mt-1">Here is your cognitive evaluation on {subject}.</p>
+        <p className="text-hexagon-text-secondary text-sm mt-1">Here is how you did on {subject}.</p>
       </div>
 
       {/* Score Summary Card */}
@@ -379,11 +382,11 @@ export default function ExamPage() {
           <p className="text-[10px] text-gray-400 mt-0.5">Pacing: 42s / question</p>
         </div>
         <div>
-          <p className="text-xs text-hexagon-text-secondary">Readiness Tier</p>
+          <p className="text-xs text-hexagon-text-secondary">Your Level</p>
           <p className={`text-3xl font-black mt-1 ${score.pct >= 80 ? 'text-emerald-400' : score.pct >= 60 ? 'text-amber-400' : 'text-red-400'}`}>
-            {score.pct >= 80 ? 'Master' : score.pct >= 60 ? 'Adequate' : 'Review'}
+            {score.pct >= 80 ? 'Ready' : score.pct >= 60 ? 'Good' : 'Review'}
           </p>
-          <p className="text-[10px] text-gray-400 mt-0.5">Adaptive Level</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">Recommended next step</p>
         </div>
       </div>
 

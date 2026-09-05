@@ -59,3 +59,8 @@ __pycache__/
 # IDEs and OS files
 .vscode/
 .idea/
+
+# local runtime logs
+*.log
+dev-server.log
+backend/uvicorn_*.log

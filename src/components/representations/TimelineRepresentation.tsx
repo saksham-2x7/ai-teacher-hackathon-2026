@@ -4,10 +4,11 @@ import { motion } from 'framer-motion';
 
 export default function TimelineRepresentation({ context: _context }: RepresentationProps) {
   const events = [
-    { year: 1943, title: "McCulloch & Pitts Model", desc: "First mathematical model of a neural network." },
-    { year: 1957, title: "The Perceptron", desc: "Frank Rosenblatt invents the Perceptron algorithm." },
-    { year: 1986, title: "Backpropagation", desc: "Rumelhart, Hinton, and Williams popularize backprop." },
-    { year: 2012, title: "AlexNet", desc: "Deep learning breakthroughs in computer vision." },
+    { year: 1752, title: "Franklin's Kite", desc: "Benjamin Franklin shows lightning is electricity." },
+    { year: 1800, title: "The First Battery", desc: "Alessandro Volta builds the Voltaic pile — the first battery." },
+    { year: 1820, title: "Magnetism Meets Electricity", desc: "Oersted discovers electric current can move a compass needle." },
+    { year: 1831, title: "Generators & Motors", desc: "Michael Faraday demonstrates electromagnetic induction." },
+    { year: 1879, title: "The Light Bulb", desc: "Edison's lamp brings electric light into everyday homes." },
   ];
 
   return (

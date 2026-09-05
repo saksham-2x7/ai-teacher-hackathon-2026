@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, AlertTriangle, CheckCircle2, XCircle, ArrowRight, Brain, Sparkles, RefreshCw, Zap } from 'lucide-react';
 import Link from 'next/link';
+import BackButton from "@/components/ui/BackButton";
 
 interface WeakConcept {
   id: string;
@@ -19,55 +20,55 @@ interface WeakConcept {
 
 const WEAK_CONCEPTS: WeakConcept[] = [
   {
-    id: "grad-desc",
-    name: "Gradient Descent Optimization",
-    category: "Optimization",
+    id: "ohm-law",
+    name: "Ohm's Law & Finding Resistance",
+    category: "Physics",
     score: 45,
-    missedReason: "Confused momentum with learning rate in mini-batch updates.",
-    remedy: "Review the directional update equation: θ ← θ - α·∇J(θ).",
-    drillQuestion: "If the learning rate α is too large in gradient descent, what happens to the loss function?",
+    missedReason: "Mixed up what current, voltage, and resistance each do in a circuit.",
+    remedy: "Use a simple memory hook: V = I × R, or 'Volts push, Ohms resist, Amps flow'.",
+    drillQuestion: "A circuit uses a 5 V battery and a 2 Ω resistor. How much current flows?",
     drillOptions: [
-      "The loss immediately drops to zero in one step",
-      "The parameters oscillate wildly and may diverge away from the minimum",
-      "The network automatically activates early stopping",
-      "Weights shrink to zero due to weight decay"
-    ],
-    correctIndex: 1,
-    explanation: "Overshooting the valley floor causes loss to explode toward infinity or bounce between walls without converging.",
-  },
-  {
-    id: "conv-filters",
-    name: "Convolutional Filters & Strides",
-    category: "Computer Vision",
-    score: 52,
-    missedReason: "Output spatial dimension formula was miscalculated with padding.",
-    remedy: "Memorize: Output Size = ⌊(W - F + 2P) / S⌋ + 1.",
-    drillQuestion: "For a 32×32 image, 5×5 kernel, padding P=0, and stride S=1, what is the output feature map size?",
-    drillOptions: [
-      "32×32",
-      "27×27",
-      "28×28",
-      "30×30"
+      "10 A",
+      "7 A",
+      "2.5 A",
+      "0.4 A"
     ],
     correctIndex: 2,
-    explanation: "(32 - 5 + 0)/1 + 1 = 27 + 1 = 28. The resulting feature map is 28×28.",
+    explanation: "I = V ÷ R = 5 ÷ 2 = 2.5 A. A smaller resistance lets more current flow.",
   },
   {
-    id: "loss-entropy",
-    name: "Cross-Entropy Loss Derivation",
-    category: "Information Theory",
-    score: 61,
-    missedReason: "Conflated Mean Squared Error (MSE) with Log-Likelihood in classification.",
-    remedy: "Use Cross-Entropy for probabilities because -log(p) heavily penalizes confident wrong predictions.",
-    drillQuestion: "Why is Cross-Entropy preferred over MSE for softmax multi-class classification?",
+    id: "photosynthesis",
+    name: "Photosynthesis — Light & Dark Reactions",
+    category: "Science",
+    score: 52,
+    missedReason: "Got the order of the light and dark reactions backwards.",
+    remedy: "Remember the order: light reactions capture sunlight first, then the dark reactions use that energy to build sugar.",
+    drillQuestion: "Where do the 'dark' reactions of photosynthesis get their energy?",
     drillOptions: [
-      "MSE produces vanishing gradients when combined with softmax saturation",
-      "MSE cannot be computed for vectors of length greater than 2",
-      "Cross-Entropy requires fewer floating point operations",
-      "MSE does not have a closed-form matrix derivative"
+      "Directly from sunlight at night",
+      "From ATP and NADPH made in the light reactions",
+      "From a battery in the leaf",
+      "From breaking down glucose"
     ],
-    correctIndex: 0,
-    explanation: "When softmax outputs are close to 0 or 1, the derivative of MSE approaches 0 even when the prediction is wrong, stalling learning.",
+    correctIndex: 1,
+    explanation: "The dark reactions (Calvin cycle) don't need light directly — they use the ATP and NADPH produced by the light reactions.",
+  },
+  {
+    id: "fractions",
+    name: "Adding Fractions with Different Denominators",
+    category: "Mathematics",
+    score: 61,
+    missedReason: "Sometimes added the denominators as well as the numerators.",
+    remedy: "Always find a common denominator first — then add only the top numbers.",
+    drillQuestion: "What is 1/3 + 1/4?",
+    drillOptions: [
+      "2/7",
+      "2/12",
+      "7/12",
+      "1/12"
+    ],
+    correctIndex: 2,
+    explanation: "Convert to twelfths: 4/12 + 3/12 = 7/12. You never add the bottom numbers.",
   }
 ];
 
@@ -89,15 +90,16 @@ export default function RevisionPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-8 pt-12 space-y-10">
+      <BackButton className="mb-2" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-mono uppercase tracking-wider text-orange-400 bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
-            Targeted Cognitive Intervention
+            Personal Revision Plan
           </span>
-          <h1 className="text-3xl font-bold text-hexagon-text-primary mt-2">Targeted Revision</h1>
+          <h1 className="text-3xl font-bold text-hexagon-text-primary mt-2">Revision Corner</h1>
           <p className="text-hexagon-text-secondary text-sm mt-1">
-            Strengthen your highest-friction concepts with targeted Socratic drills.
+            Revisit the topics you found tricky with short questions and clear explanations.
           </p>
         </div>
 
@@ -107,14 +109,14 @@ export default function RevisionPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 text-xs font-semibold transition-colors"
           >
             <BookOpen className="w-3.5 h-3.5" />
-            12 Cards Due
+            9 Cards Due
           </Link>
           <Link 
             href="/tutor"
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-hexagon-accent text-black font-semibold text-xs hover:bg-hexagon-accent/90 transition-colors shadow-lg shadow-hexagon-accent/10"
           >
             <Brain className="w-3.5 h-3.5" />
-            Tutor Studio
+            Ask Your AI Teacher
           </Link>
         </div>
       </div>
@@ -124,9 +126,9 @@ export default function RevisionPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="w-5 h-5 text-orange-400" />
-            <h2 className="text-lg font-bold text-hexagon-text-primary">Detected Knowledge Gaps ({WEAK_CONCEPTS.length})</h2>
+            <h2 className="text-lg font-bold text-hexagon-text-primary">Tricky Topics ({WEAK_CONCEPTS.length})</h2>
           </div>
-          <span className="text-xs text-gray-400">Answer drills to instantly boost mastery rating</span>
+          <span className="text-xs text-gray-400">Answer a quick question to bump up your score</span>
         </div>
 
         <div className="space-y-4">
@@ -169,7 +171,7 @@ export default function RevisionPage() {
                           <span className="text-[10px] text-emerald-400 font-bold font-mono">(+25%)</span>
                         )}
                       </div>
-                      <span className="text-[10px] text-gray-400 block">Mastery Score</span>
+                      <span className="text-[10px] text-gray-400 block">Score</span>
                     </div>
 
                     <button
@@ -181,7 +183,7 @@ export default function RevisionPage() {
                       }`}
                     >
                       <Zap className="w-3.5 h-3.5" />
-                      {isDrillOpen ? 'Close Drill' : 'Test Concept'}
+                      {isDrillOpen ? 'Close Question' : 'Try a Question'}
                     </button>
                   </div>
                 </div>
@@ -199,9 +201,9 @@ export default function RevisionPage() {
                         <div className="flex items-center justify-between text-xs text-gray-400">
                           <span className="font-semibold text-white flex items-center gap-1.5">
                             <Sparkles className="w-3.5 h-3.5 text-hexagon-accent" />
-                            Targeted Diagnostic Question
+                            Quick Check Question
                           </span>
-                          <span>Select correct derivation</span>
+                          <span>Pick the best answer</span>
                         </div>
 
                         <p className="text-sm font-medium text-white leading-relaxed">
@@ -248,19 +250,19 @@ export default function RevisionPage() {
                               isCorrect ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-red-500/10 text-red-300 border border-red-500/20'
                             }`}
                           >
-                            <p className="font-semibold mb-0.5">{isCorrect ? '✓ Mastery increased by +25%' : '✗ Conceptual Misconception'}</p>
+                            <p className="font-semibold mb-0.5">{isCorrect ? '✓ Nice work! Score +25%' : '✗ Not quite — here is why'}</p>
                             <p className="text-gray-300 text-[11px]">{concept.explanation}</p>
                           </motion.div>
                         )}
                       </div>
 
                       <div className="flex items-center justify-between text-xs text-gray-400 pt-1">
-                        <span>Curated AI Remedy: <strong className="text-gray-200">{concept.remedy}</strong></span>
+                        <span>AI Teacher Tip: <strong className="text-gray-200">{concept.remedy}</strong></span>
                         <Link 
                           href="/tutor"
                           className="text-hexagon-accent hover:underline flex items-center gap-1 font-semibold"
                         >
-                          Deep-dive in Classroom <ArrowRight className="w-3.5 h-3.5" />
+                          Ask your AI Teacher <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       </div>
                     </motion.div>

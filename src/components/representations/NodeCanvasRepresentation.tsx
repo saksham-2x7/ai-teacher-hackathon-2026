@@ -51,8 +51,14 @@ const defaultEdgeOptions = {
   style: { stroke: 'rgba(255,255,255,0.8)', strokeWidth: 2, filter: 'drop-shadow(0 0 5px rgba(255,255,255,0.5))' },
 };
 
-export default function NodeCanvasRepresentation({ context: _context }: RepresentationProps) {
-  const [nodes, setNodes] = useState<Node[]>(initialNodes);
+export default function NodeCanvasRepresentation({ context }: RepresentationProps) {
+  const topic = context.topic || 'Core Concepts';
+  const topicNodes: Node[] = [
+    { id: 'A', type: 'premium', position: { x: 250, y: 100 }, data: { label: `${topic} — the idea` } },
+    { id: 'B', type: 'premium', position: { x: 80, y: 300 }, data: { label: `${topic} — example` } },
+    { id: 'C', type: 'premium', position: { x: 420, y: 300 }, data: { label: `${topic} — practice` } },
+  ];
+  const [nodes, setNodes] = useState<Node[]>(() => topic !== 'Core Concepts' ? topicNodes : initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const dispatchAction = useSemanticDispatcher((state) => state.dispatchAction);
 

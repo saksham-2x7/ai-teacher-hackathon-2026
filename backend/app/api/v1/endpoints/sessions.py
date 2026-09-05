@@ -1,6 +1,7 @@
+import asyncio
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Header, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uuid
@@ -26,12 +27,16 @@ class StudentInputRequest(BaseModel):
     student_input: str
 
 @router.post("", response_model=TeachingSession, status_code=status.HTTP_201_CREATED)
-async def create_session(request: CreateSessionRequest):
+async def create_session(
+    request: CreateSessionRequest,
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
     new_session = TeachingSession(
         learner_profile=request.learner_profile,
         current_topic=request.current_topic,
         material_id=request.material_id,
-        current_state=TeachingState.IDLE
+        current_state=TeachingState.IDLE,
+        api_key=x_api_key
     )
     return await session_repo.create_session(new_session)
 
@@ -93,7 +98,15 @@ async def stream_interaction(session_id: str):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
         
     async def sse_generator():
-        async for chunk in generate_teaching_turn(session_id):
-            yield f"data: {chunk}\n\n"
-            
+        try:
+            async for chunk in generate_teaching_turn(session_id):
+                yield f"data: {chunk}\n\n"
+            # Keep the EventSource alive with heartbeat comments so it never
+            # errors out; real turns arrive via the interact stream too.
+            while True:
+                await asyncio.sleep(15)
+                yield ": ping\n\n"
+        except Exception:
+            return
+
     return StreamingResponse(sse_generator(), media_type="text/event-stream")

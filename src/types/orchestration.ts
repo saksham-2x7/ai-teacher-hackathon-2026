@@ -6,6 +6,9 @@ export interface AIIntentState {
   lessonPhase: LessonPhase;
   focusTargetId: string | null;
   scaffoldLevel: number;
+  topic?: string;
+  teacherMessage?: string;
+  visualTitle?: string;
 }
 
 export interface RepresentationMetadata {

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, CheckCircle2, Circle, Plus, ArrowRight, Sparkles, Brain, Flame, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import BackButton from "@/components/ui/BackButton";
 
 interface StudyPlanItem {
   id: string;
@@ -16,12 +17,12 @@ interface StudyPlanItem {
 }
 
 const INITIAL_PLAN: StudyPlanItem[] = [
-  { id: '1', day: "Monday", goal: "Neural Networks Architecture & Perceptrons", topic: "AI & ML", time: "25m", minutes: 25, done: true, priority: 'high' },
-  { id: '2', day: "Tuesday", goal: "Multivariate Calculus & Backpropagation Chain Rule", topic: "Mathematics", time: "35m", minutes: 35, done: true, priority: 'high' },
-  { id: '3', day: "Wednesday (Today)", goal: "Activation Functions & Vanishing Gradient Remediation", topic: "Deep Learning", time: "30m", minutes: 30, done: false, priority: 'high' },
-  { id: '4', day: "Thursday", goal: "Convolutional Filters, Strides & Spatial Pooling", topic: "Computer Vision", time: "40m", minutes: 40, done: false, priority: 'medium' },
-  { id: '5', day: "Friday", goal: "Weekly Concept Consolidation & Flashcard Drill", topic: "Revision", time: "20m", minutes: 20, done: false, priority: 'normal' },
-  { id: '6', day: "Saturday", goal: "Exam Arena: 15-Minute Timed Simulation", topic: "Assessment", time: "15m", minutes: 15, done: false, priority: 'high' },
+  { id: '1', day: "Monday", goal: "Electricity: How Circuits Work", topic: "Physics", time: "25m", minutes: 25, done: true, priority: 'high' },
+  { id: '2', day: "Tuesday", goal: "Ohm's Law & Practice Problems", topic: "Physics", time: "35m", minutes: 35, done: true, priority: 'high' },
+  { id: '3', day: "Wednesday (Today)", goal: "Photosynthesis: Light & Dark Reactions", topic: "Science", time: "30m", minutes: 30, done: false, priority: 'high' },
+  { id: '4', day: "Thursday", goal: "Balancing Chemical Equations", topic: "Chemistry", time: "40m", minutes: 40, done: false, priority: 'medium' },
+  { id: '5', day: "Friday", goal: "Weekly Revision & Flashcard Drill", topic: "Revision", time: "20m", minutes: 20, done: false, priority: 'normal' },
+  { id: '6', day: "Saturday", goal: "Practice Test: Science (15 Minutes)", topic: "Assessment", time: "15m", minutes: 15, done: false, priority: 'high' },
 ];
 
 export default function PlannerPage() {
@@ -60,15 +61,16 @@ export default function PlannerPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-8 pt-12 space-y-10">
+      <BackButton className="mb-2" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-mono uppercase tracking-widest text-hexagon-accent bg-hexagon-accent/15 px-3 py-1 rounded-full border border-hexagon-accent/25">
-            AI-Calibrated Curriculum
+            Personal Study Plan
           </span>
-          <h1 className="text-3xl font-bold text-hexagon-text-primary mt-2">Adaptive Study Planner</h1>
+          <h1 className="text-3xl font-bold text-hexagon-text-primary mt-2">Weekly Planner</h1>
           <p className="text-hexagon-text-secondary text-sm mt-1">
-            Personalized study trajectory dynamically paced around your retention score.
+            A study plan made around your goals, your pace, and your week.
           </p>
         </div>
 
@@ -77,7 +79,7 @@ export default function PlannerPage() {
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 text-white font-semibold text-xs hover:bg-white/15 transition-colors border border-white/10"
           >
-            <Plus className="w-4 h-4" /> Add Milestone
+            <Plus className="w-4 h-4" /> Add Session
           </button>
           <Link
             href="/tutor"
@@ -95,7 +97,7 @@ export default function PlannerPage() {
             <Calendar className="w-7 h-7" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">This Week&apos;s Orbit</h2>
+            <h2 className="text-lg font-bold text-white">This Week&apos;s Plan</h2>
             <p className="text-xs text-hexagon-text-secondary mt-0.5">{completedCount} of {plan.length} sessions completed</p>
           </div>
         </div>
@@ -120,7 +122,7 @@ export default function PlannerPage() {
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-gray-400 px-1">
           <span>Click checkboxes to update completion status</span>
-          <span>Adaptive Pace: 30m / day</span>
+          <span>Suggested Pace: 30m / day</span>
         </div>
 
         <div className="space-y-3">
@@ -190,7 +192,7 @@ export default function PlannerPage() {
               className="bg-hexagon-surface border border-hexagon-border p-6 rounded-2xl max-w-md w-full space-y-5 shadow-2xl"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white">Add Study Milestone</h3>
+                <h3 className="text-lg font-bold text-white">Add a Study Session</h3>
                 <button 
                   onClick={() => setShowAddModal(false)}
                   className="text-gray-400 hover:text-white text-sm"
@@ -207,7 +209,7 @@ export default function PlannerPage() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Transformer Self-Attention Derivation"
+                    placeholder="e.g. Revise photosynthesis or practice fractions"
                     value={newGoal}
                     onChange={e => setNewGoal(e.target.value)}
                     className="w-full bg-background border border-hexagon-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-hexagon-accent"

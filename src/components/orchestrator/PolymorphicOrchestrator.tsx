@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAIIntentStore } from '../../store/useAIIntentStore';
 import { getRepresentation } from '../../lib/registry/RepresentationRegistry';
 import { useShallow } from 'zustand/react/shallow';
+import ZoomPanContainer from '../ui/ZoomPanContainer';
 
 export default function PolymorphicOrchestrator() {
   const context = useAIIntentStore(
@@ -11,7 +12,10 @@ export default function PolymorphicOrchestrator() {
       activeRepresentation: state.activeRepresentation,
       lessonPhase: state.lessonPhase,
       focusTargetId: state.focusTargetId,
-      scaffoldLevel: state.scaffoldLevel
+      scaffoldLevel: state.scaffoldLevel,
+      topic: state.activeTopic,
+      teacherMessage: state.teacherMessage,
+      visualTitle: state.visualTitle
     }))
   );
 
@@ -45,7 +49,9 @@ export default function PolymorphicOrchestrator() {
               Initializing {context.activeRepresentation}...
             </div>
           }>
-            <Representation context={context} />
+            <ZoomPanContainer>
+              <Representation context={context} />
+            </ZoomPanContainer>
           </Suspense>
         </motion.div>
       </AnimatePresence>

@@ -1,57 +1,60 @@
-# HEXAGON - The Polymorphic AI Teacher
+# HEXAGON — Your Personal AI Teacher (MVP)
 
-HEXAGON is an advanced AI educational platform built for the **AI Innovation Hackathon 2026**. 
-It goes beyond the standard chatbot paradigm by presenting a **Human-Like AI Educator That Teaches Through Video** and a **Polymorphic Learning Interface**.
+HEXAGON is an AI education platform built for the **AI Innovation Hackathon 2026**.
+Core loop: tell the app **what you want to learn** (any topic), optionally drop in a **class
+document**, pick a **time budget** — and a live **3D AI teacher** teaches the lesson out loud,
+step by step, swapping live visuals (text, diagrams, concept maps) as it speaks, asking you
+questions and chatting back. It runs on three screens: **Home → Setup → Lesson**.
 
-## The Problem
-Current AI education tools act like encyclopedias or static chat interfaces. They wait for the student to ask the right question. Real teachers don't just talk; they *show*, *adapt*, *draw*, *simulate*, and *guide*. 
+## Screens
 
-## The Solution
-HEXAGON introduces a **Polymorphic Learning Interface**. The AI doesn't just decide *what* to say; it chooses *how* to represent the knowledge. The learning workspace dynamically shifts between:
-- Interactive 3D Simulations
-- Node-based Concept Graphs
-- Code Execution Environments
-- Mathematical Timelines
-- Direct Manipulation Workspaces
+- **Home** (`/home`) — one input, one START button. Type anything ("Black Holes", "Newton's laws").
+- **Setup** (`/setup`) — topic + optional notes upload + time budget (10–45 min) → START LESSON.
+  The lesson URL is derived from the topic (`/lesson/black-holes?sessionId=<uuid>`).
+- **Lesson** (`/lesson/[slug]`) — the 3D teacher PiP (speech + lip-sync + captions + waveform +
+  mute/expand), live streaming teaching content in the centre (SSE), a chat panel that talks back
+  (`/interact`), and pop-in questions. Reloading a lesson re-renders the last teacher turn from
+  session history.
+- **Settings** (`/settings`) — paste your own API key (used as `X-API-Key` per session) or reset
+  all browser data.
 
-Coupled with a **3D Human-like Avatar** that maintains context-aware eye-tracking, breathing, and lip-syncing, HEXAGON feels like a live 1-on-1 tutoring session.
+## How the AI pipeline works
 
-## Core Architecture
-- **Next.js App Router (React 19, Turbopack)**
-- **Zustand** for state and interaction tracking
-- **React Three Fiber & Drei** for WebGL representations and 3D Avatar rendering
-- **Framer Motion** for cinematic UI transitions
-- **Tailwind CSS** for the premium 'minimal luxury' design system
+1. `POST /api/v1/sessions` creates a session from your topic + learner profile (level, time, style).
+2. `GET /api/v1/sessions/{id}/stream` opens a **server-sent-events** stream: the backend
+   (FastAPI + Gemini) pushes teaching turns `{ spoken_text, visual_intent, interactive_prompt, state }`.
+   The frontend connects **directly to the backend** for SSE (the dev proxy buffers streams in the
+   browser), with heartbeat `: ping` keeping it alive.
+3. `visual_intent.type` switches the visible representation (text / diagram / concept map / graph /
+   timeline / code), and `spoken_text` is spoken via TTS with audio-driven lip-sync.
+4. Chat uses `POST /api/v1/sessions/{id}/interact` (also an SSE stream of the same turn shape).
+5. Backend is OpenAI-compatible against Gemini; a shared key is a local fallback, and any
+   per-student key sent as `X-API-Key` overrides it for that session.
 
-## Key Features (Hackathon Rubric)
+## Tech
 
-### 1. Human-Like Teaching & Adaptation (20/20)
-HEXAGON operates on a robust Semantic Orchestrator (`MockAIEngine.tsx`) that cycles through standard pedagogical phases: `Explain -> Hypothesize -> Construct -> Evaluate -> Adapt`. If a student gets a question wrong, the AI detects the specific misconception, drops down a scaffold level, changes the visual representation (e.g., from 3D to Timeline), and re-teaches the concept.
+- **Next.js App Router (React 19), Zustand, Tailwind CSS, Framer Motion, Lucide**
+- **React Three Fiber + Drei** — 3D teacher avatar with procedural lip-sync / breathing / idle
+- **FastAPI + Gemini** backend at `http://127.0.0.1:8000`
+- **UI:** Neo-brutalist — thick black borders, hard offset shadows, flat lime/black/white. Dark
+  "stage" in the lesson so the 3D avatar pops.
 
-### 2. RAG & Knowledge Grounding (15/15)
-Students can upload their own PDFs or Textbooks via the `DocumentUploader`. The system processes these documents (Parsing -> Extracting -> Indexing) and grounds the AI's lesson plan entirely on the provided material, providing a highly personalized curriculum.
-
-### 3. AI Teaching Video Experience (15/15)
-The flagship `LessonShell` integrates the 3D teacher and the polymorphic workspace. As the teacher speaks, captions appear, the teacher's mouth moves in sync, and they look towards the interactive elements of the workspace.
-
-### 4. Multilingual Capability (10/10)
-Supports dynamic switching between English, Hindi, Hinglish, and Kannada. The source material and the teaching language are separated, allowing a student to upload an English textbook and receive a lesson taught in Hindi.
-
-### 5. Voice and AI Avatar (10/10)
-A custom 3D avatar pipeline built with `@react-three/fiber` featuring procedurally animated breathing, blinking, mouse-tracking, and state-driven lip-syncing. Multiple personas (ARIA & ALEX) are supported.
-
-## Setup & Running
+## Run it
 
 ```bash
+# frontend (port 3000)
 npm install
 npm run dev
+
+# backend (port 8000)
+pip install -r backend/requirements.txt
+cd backend && uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
-Visit `http://localhost:3000` to see the application.
 
-## Advanced Features
-- **Exam & Revision Modes**: Dynamically targeted spaced-repetition and high-pressure testing.
-- **Planner**: AI-generated weekly study schedules.
-- **Flashcards**: Auto-generated from the lesson's conceptual graph.
+The frontend proxies `/api/*` to `127.0.0.1:8000` in dev (non-streaming). SSE bypasses the proxy.
 
-## Limitations & Future Work
-This is the Frontend/Mock architecture for the hackathon presentation. The `MockAIEngine` is designed to be completely hot-swappable with a real WebSocket-based LLM streaming backend, utilizing the strongly-typed `SemanticEvent` dispatch system.
+## Personal API key
+
+Open **Settings** on the home page and paste a key from your model provider's console. It is stored
+in this browser only, sent to the lesson backend as the `X-API-Key` header, and used instead of the
+shared server key for every lesson you start. The app works without one (shared classroom key).

@@ -19,7 +19,7 @@ export default function LessonShell({ children }: { children: ReactNode }) {
     <div className="flex h-screen w-full bg-[#030409] text-white overflow-hidden font-sans relative selection:bg-indigo-500/30">
       {/* Deep Space Background / Noise */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay"></div>
+        <div className="absolute inset-0 bg-[url('/noise.svg')] bg-repeat opacity-[0.02] mix-blend-overlay"></div>
         <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-indigo-900/10 to-transparent blur-3xl opacity-50" />
       </div>
 

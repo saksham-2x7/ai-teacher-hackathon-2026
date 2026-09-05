@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF, useAnimations, useFBX } from '@react-three/drei';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useAIIntentStore } from '@/store/useAIIntentStore';
+import type { TeacherState } from '@/types/teacher';
 import { useAudioLipSync } from '@/hooks/useAudioLipSync';
 import { speechSynthesizer } from '@/services/speechSynthesizer';
 import { VisemeName } from '@/utils/phonetics';
@@ -21,6 +22,12 @@ const ALL_OCULUS_VISEMES: VisemeName[] = [
   'viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U'
 ];
 
+// Expressiveness states that count as "out loud". Kept as a Set so TypeScript
+// does not narrow `teacherState` to the leftover union and reject later checks.
+const SPEAKING_STATES: ReadonlySet<TeacherState> = new Set<TeacherState>([
+  'speaking', 'teaching', 'correcting', 'celebrating'
+]);
+
 // Inner avatar component wrapped in Suspense
 function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAvatarProps) {
   const { profile } = useAuthStore();
@@ -28,11 +35,7 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
   const { getPhonemeWeights } = useAudioLipSync();
 
   const isMale = profile?.tutorGender === 'male';
-  const isSpeaking =
-    teacherState === 'speaking' ||
-    teacherState === 'teaching' ||
-    teacherState === 'correcting' ||
-    teacherState === 'celebrating';
+  const isSpeaking = SPEAKING_STATES.has(teacherState);
 
   // Authentic Ready Player Me human avatars
   const modelUrl = isMale ? '/models/alex_v2.glb' : '/models/aria_v2.glb';
@@ -180,6 +183,26 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
     const delta = Math.min(rawDelta, 0.05);
     const t = state.clock.elapsedTime;
 
+    // 0. Whole-body presence: gentle idle sway, forward-lean while teaching,
+    //    subtle body-bounce while speaking, playful energy when celebrating
+    if (groupRef.current) {
+      const isTeachingActive = isSpeaking || teacherState === 'teaching';
+      const isCelebrating = teacherState === 'celebrating';
+      const swayYaw = Math.sin(t * 0.7) * 0.012;
+      const swayRoll = Math.sin(t * 0.55) * 0.008;
+      const lean = isTeachingActive ? -0.04 : 0;
+      const bodyBounce = isCelebrating
+        ? Math.abs(Math.sin(t * 6)) * 0.025
+        : isSpeaking
+          ? Math.abs(Math.sin(t * 7)) * 0.006
+          : 0;
+
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, swayYaw, delta * 3);
+      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, lean, delta * 3);
+      groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, swayRoll, delta * 3);
+      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, bodyBounce, delta * 5);
+    }
+
     // 1. Natural Breathing (Spine & Neck subtle expansion)
     if (spineRef.current) {
       const breath = Math.sin(t * 1.8) * 0.015;
@@ -203,9 +226,10 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
         targetRoll = 0.05;
       }
 
-      // Add gentle organic micro-movements + speech head nod
+      // Add gentle organic micro-movements + speech head nod + listening acknowledgment
       const isSpeakingActive = speechSynthesizer.getIsSpeaking() || isSpeaking;
       const speechNod = isSpeakingActive ? Math.sin(t * 7) * 0.025 : 0;
+      const listeningNod = teacherState === 'listening' ? Math.abs(Math.sin(t * 4.5)) * 0.03 : 0;
       const microSwayYaw = Math.sin(t * 0.9) * 0.015;
       const microSwayPitch = Math.cos(t * 1.2) * 0.01;
 
@@ -218,7 +242,7 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
       ) || 0;
       headRef.current.rotation.x = THREE.MathUtils.lerp(
         headRef.current.rotation.x || 0,
-        0.02 - (state.pointer.y * Math.PI) / 18 + microSwayPitch + speechNod,
+        0.02 - (state.pointer.y * Math.PI) / 18 + microSwayPitch + speechNod + listeningNod,
         delta * 4.5
       ) || 0;
       headRef.current.rotation.z = THREE.MathUtils.lerp(

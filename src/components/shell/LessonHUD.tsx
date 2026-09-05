@@ -1,10 +1,13 @@
 'use client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cpu, Send, User, Bot, Sparkles } from 'lucide-react';
+import { Send, User, Bot, Hexagon, Home, Plus, Sparkles } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAIIntentStore } from '../../store/useAIIntentStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAudioLipSync } from '../../hooks/useAudioLipSync';
+import { liveSSEClient, mapBackendTeacherState, mapBackendVisualType, mapInteractivePromptToQuestion } from '../../services/liveSSEClient';
+import { toFastAPILearnerProfile } from '../../utils/toFastAPILearnerProfile';
+import Link from 'next/link';
 
 
 interface ChatMessage {
@@ -19,7 +22,8 @@ export default function LessonHUD() {
   const [isProcessing, setIsProcessing] = useState(false);
   const { profile } = useAuthStore();
   const tutorGender = profile?.tutorGender || 'female';
-  const { connectAudioElement } = useAudioLipSync();
+  const { connectAudioElement, getAudioContext } = useAudioLipSync();
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -30,12 +34,20 @@ export default function LessonHUD() {
     }
   }, [messages]);
 
-  // Hook into SSE Client globally for AI responses initiated outside this chat
+  // Unlock the shared AudioContext / auto-play on first interaction so TTS +
+  // lip-sync actually fire (browsers block audio until a user gesture).
   useEffect(() => {
-    // When the stream starts or pushes a teaching turn, add it to chat!
-    // Since liveSSEClient doesn't expose a global subscribe yet, we'll just handle 
-    // the chat interactions locally here for now.
-  }, []);
+    if (typeof window === 'undefined') return;
+    const unlock = () => {
+      getAudioContext()?.resume().catch(() => {});
+    };
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, [getAudioContext]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,10 +57,20 @@ export default function LessonHUD() {
     setInput('');
     setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', text: userMsg }]);
     setIsProcessing(true);
+    setChatError(null);
+    useAIIntentStore.getState().setActiveQuestion(null);
 
     try {
-      const sessionId = sessionStorage.getItem('hexagon_session_id');
-      if (!sessionId) throw new Error('No session ID');
+      // Use a real backend session — create one on the spot if missing/stale
+      let sessionId = sessionStorage.getItem('hexagon_session_id');
+      if (!sessionId || sessionId.startsWith('session_local_')) {
+        sessionId = await liveSSEClient.createSession(
+          toFastAPILearnerProfile(profile, useAIIntentStore.getState().activeTopic)
+        );
+      }
+      if (sessionId.startsWith('session_local_')) {
+        throw new Error('The teacher backend is not reachable.');
+      }
 
       // Use relative path for Next.js proxy -> Vercel Backend
       const res = await fetch(`/api/v1/sessions/${sessionId}/interact`, {
@@ -57,7 +79,7 @@ export default function LessonHUD() {
         body: JSON.stringify({ student_input: userMsg })
       });
 
-      if (!res.ok) throw new Error('Failed to send message');
+      if (!res.ok) throw new Error(`Backend replied ${res.status}`);
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
@@ -77,13 +99,21 @@ export default function LessonHUD() {
               const text = data.spoken_text || data.message || '';
               if (text) {
                 setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', text }]);
+                useAIIntentStore.getState().setTeacherState(mapBackendTeacherState(data.state), text);
               }
+              if (data.visual_intent) {
+                const repr = mapBackendVisualType(data.visual_intent.type);
+                if (repr) useAIIntentStore.getState().setRepresentation(repr);
+              }
+              const question = mapInteractivePromptToQuestion(data.interactive_prompt);
+              if (question) useAIIntentStore.getState().setActiveQuestion(question);
             } catch (err) {}
           }
         }
       }
     } catch (error) {
       console.error('Chat error:', error);
+      setChatError(error instanceof Error ? error.message : 'Failed to send message. Try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -95,43 +125,42 @@ export default function LessonHUD() {
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start"
+        transition={{ duration: 0.4 }}
+        className="absolute top-0 left-0 right-0 p-5 flex justify-between items-center"
       >
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl flex items-center justify-center shadow-lg">
-            <Cpu className="w-4 h-4 text-indigo-400" />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold tracking-wide text-white/90">Polymorphic Kernel</h2>
-            <div className="flex items-center gap-2 mt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-mono text-emerald-400/80 tracking-widest uppercase">System Optimal</span>
-            </div>
-          </div>
+        <Link href="/home" className="flex items-center gap-2.5 brut-btn brut-ink px-4 py-2.5 text-sm">
+          <Hexagon className="w-5 h-5" /> <span className="font-black tracking-tight">HEXAGON</span>
+        </Link>
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <Link href="/home" className="brut-btn brut-secondary px-4 py-2.5 text-xs flex items-center gap-1.5">
+            <Home className="w-4 h-4" /> HOME
+          </Link>
+          <Link href="/setup" className="brut-btn brut-primary px-4 py-2.5 text-xs flex items-center gap-1.5">
+            <Plus className="w-4 h-4" /> NEW LESSON
+          </Link>
         </div>
       </motion.div>
 
-      {/* NEW FEATURE: Axiom Neural Chat Interface (Replaces Semantic Telemetry) */}
+      {/* AI Teacher Chat Panel */}
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="absolute bottom-6 left-6 w-80 sm:w-96 flex flex-col pointer-events-auto h-[400px]"
+        transition={{ delay: 0.2, duration: 0.4 }}
+        className="absolute bottom-6 left-6 w-80 sm:w-96 flex flex-col pointer-events-auto h-[420px]"
       >
-        <div className="flex-1 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl flex flex-col overflow-hidden shadow-2xl">
+        <div className="flex-1 brut-card flex flex-col overflow-hidden bg-white">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-white/5 bg-white/5 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-xs font-semibold tracking-wider text-gray-200 uppercase">Axiom Neural Link</span>
+          <div className="px-4 py-3 border-b-[3px] border-black bg-[#00E9FF] flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-black" />
+            <span className="text-xs font-black tracking-wider uppercase">Chat with your teacher</span>
           </div>
 
           {/* Chat Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
             <AnimatePresence>
               {messages.length === 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex items-center justify-center text-center text-gray-500 text-xs font-mono">
-                  Ready to interact. Send a message to guide the lesson.
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex items-center justify-center text-center text-black/50 text-xs font-mono">
+                  Ask your teacher a question, or reply to what you hear.
                 </motion.div>
               ) : (
                 messages.map(msg => (
@@ -141,13 +170,13 @@ export default function LessonHUD() {
                     animate={{ opacity: 1, y: 0 }}
                     className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                   >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-purple-500/20 text-purple-400'}`}>
-                      {msg.role === 'user' ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
+                    <div className={`w-7 h-7 rounded-full border-[2px] border-black flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-[#C4B5FD]' : 'bg-[#00FF9D]'}`}>
+                      {msg.role === 'user' ? <User className="w-3.5 h-3.5 text-black" /> : <Bot className="w-3.5 h-3.5 text-black" />}
                     </div>
-                    <div className={`text-sm px-3 py-2 rounded-xl max-w-[85%] ${
+                    <div className={`text-sm px-3 py-2 rounded-xl max-w-[85%] font-semibold ${
                       msg.role === 'user' 
-                        ? 'bg-indigo-500/20 text-indigo-100 rounded-tr-sm' 
-                        : 'bg-white/5 text-gray-200 rounded-tl-sm border border-white/5'
+                        ? 'bg-[#C4B5FD] text-black rounded-tr-sm' 
+                        : 'bg-black text-white rounded-tl-sm'
                     }`}>
                       {msg.text}
                     </div>
@@ -156,36 +185,46 @@ export default function LessonHUD() {
               )}
               {isProcessing && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 bg-purple-500/20 text-purple-400">
-                    <Bot className="w-3 h-3" />
+                  <div className="w-7 h-7 rounded-full border-[2px] border-black flex items-center justify-center shrink-0 bg-[#00FF9D]">
+                    <Bot className="w-3.5 h-3.5 text-black" />
                   </div>
-                  <div className="text-sm px-3 py-2 rounded-xl bg-white/5 text-gray-400 rounded-tl-sm border border-white/5 flex gap-1 items-center">
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75" />
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150" />
+                  <div className="text-sm px-3 py-2 rounded-xl bg-black text-white flex gap-1 items-center">
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" />
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce delay-75" />
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce delay-150" />
                   </div>
+                </motion.div>
+              )}
+              {chatError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-xs px-3 py-2 rounded-xl bg-[#FF4D4D] text-white border-[2px] border-black font-bold"
+                >
+                  {chatError}
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
           {/* Input Area */}
-          <form onSubmit={handleSend} className="p-3 border-t border-white/5 bg-black/20">
+          <form onSubmit={handleSend} className="p-3 border-t-[3px] border-black bg-white">
             <div className="relative flex items-center">
               <input
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 placeholder="Ask a question or reply..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-4 pr-10 text-sm outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all text-white placeholder-gray-500"
+                className="w-full brut-input py-3 pl-4 pr-12 text-sm font-bold"
                 disabled={isProcessing}
               />
               <button
                 type="submit"
                 disabled={!input.trim() || isProcessing}
-                className="absolute right-2 p-1.5 text-gray-400 hover:text-white disabled:opacity-50 transition-colors bg-white/5 hover:bg-white/10 rounded-lg"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-[8px] border-2 border-black bg-[#00FF9D] text-black flex items-center justify-center disabled:opacity-40 hover:bg-[#7CFFC0] transition-colors"
+                title="Send (Enter)"
               >
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-4 h-4" />
               </button>
             </div>
           </form>

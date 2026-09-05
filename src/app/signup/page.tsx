@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Eye, EyeOff, Loader2, Check } from "lucide-react";
 import Link from "next/link";
+import BackButton from "@/components/ui/BackButton";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -28,7 +29,8 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-hexagon-bg">
+    <div className="min-h-screen flex bg-hexagon-bg relative">
+      <BackButton className="absolute top-6 left-6 z-20" href="/home" />
       <div className="hidden lg:flex lg:w-1/2 bg-black flex-col justify-between p-12 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-hexagon-accent/5 via-transparent to-blue-900/10" />
         <div className="relative z-10 flex items-center gap-3">
@@ -39,7 +41,7 @@ export default function SignupPage() {
           <div className="text-4xl font-semibold text-white leading-tight">Start your learning journey today.</div>
           <p className="text-white/50 text-lg">Personalized AI tutoring that adapts to your pace, style, and goals.</p>
           <div className="space-y-3">
-            {["AI tutor that teaches visually and adapts to you", "Polymorphic learning — concepts shown 7 different ways", "Built-in spaced repetition & mastery tracking"].map(f => (
+            {["An AI teacher that explains things clearly and adapts to you", "Concepts shown in new ways until they click", "Smart revision & flashcards to help you remember"].map(f => (
               <div key={f} className="flex items-center gap-3 text-white/70">
                 <div className="w-5 h-5 rounded-full bg-hexagon-accent/20 border border-hexagon-accent/40 flex items-center justify-center"><Check className="w-3 h-3 text-hexagon-accent" /></div>
                 <span className="text-sm">{f}</span>

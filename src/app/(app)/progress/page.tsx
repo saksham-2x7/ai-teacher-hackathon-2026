@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Brain, Star, Flame, Clock, Award, ArrowUpRight, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/useAuthStore';
+import BackButton from "@/components/ui/BackButton";
 
 interface Concept {
   name: string;
@@ -14,14 +15,13 @@ interface Concept {
 }
 
 const ALL_CONCEPTS: Concept[] = [
-  { name: "Activation Functions (ReLU, Sigmoid)", category: "Neural Networks", score: 95, status: 'mastered', lastStudied: "2 hours ago" },
-  { name: "Newton's First Law of Motion", category: "Physics", score: 92, status: 'mastered', lastStudied: "Yesterday" },
-  { name: "Backpropagation & Chain Rule", category: "Neural Networks", score: 88, status: 'strong', lastStudied: "Today" },
-  { name: "Quantum Superposition & Qubits", category: "Quantum Physics", score: 84, status: 'strong', lastStudied: "3 days ago" },
-  { name: "Loss Functions & Cross-Entropy", category: "Neural Networks", score: 76, status: 'strong', lastStudied: "2 days ago" },
-  { name: "Gradient Descent & Learning Rate", category: "Optimization", score: 45, status: 'review', lastStudied: "Today" },
-  { name: "Convolutional Filters & Strides", category: "Computer Vision", score: 52, status: 'review', lastStudied: "Yesterday" },
-  { name: "Eigenvalues & Eigenvectors", category: "Mathematics", score: 58, status: 'review', lastStudied: "4 days ago" },
+  { name: "Newton's First Law of Motion", category: "Physics", score: 95, status: 'mastered', lastStudied: "Yesterday" },
+  { name: "Electricity — Basics of Voltage & Current", category: "Physics", score: 88, status: 'strong', lastStudied: "Today" },
+  { name: "Photosynthesis — Light & Dark Reactions", category: "Science", score: 84, status: 'strong', lastStudied: "3 days ago" },
+  { name: "Earth's Water Cycle", category: "Science", score: 76, status: 'strong', lastStudied: "2 days ago" },
+  { name: "Ohm's Law & Resistance", category: "Physics", score: 45, status: 'review', lastStudied: "Today" },
+  { name: "Fractions — Adding with Different Denominators", category: "Mathematics", score: 52, status: 'review', lastStudied: "Yesterday" },
+  { name: "Balancing Chemical Equations", category: "Science", score: 58, status: 'review', lastStudied: "4 days ago" },
 ];
 
 const WEEKLY_ACTIVITY = [
@@ -45,19 +45,20 @@ export default function ProgressPage() {
     return c.status === 'review';
   });
 
-  const totalStudyHours = Math.round((profile?.totalStudyMinutes || 320) / 60);
-  const totalStudyMinutesRem = (profile?.totalStudyMinutes || 320) % 60;
-  const masteryPercentage = 78;
+  const totalStudyHours = Math.round((profile?.totalStudyMinutes || 0) / 60);
+  const totalStudyMinutesRem = (profile?.totalStudyMinutes || 0) % 60;
+  const masteryPercentage = 0;
   const circumference = 2 * Math.PI * 54;
   const strokeDashoffset = circumference - (masteryPercentage / 100) * circumference;
 
   return (
     <div className="max-w-6xl mx-auto p-8 pt-12 space-y-10">
+      <BackButton className="mb-2" />
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-hexagon-text-primary">Cognitive Progress</h1>
-          <p className="text-hexagon-text-secondary text-sm mt-1">Real-time mastery tracking and adaptive learning analytics.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-hexagon-text-primary">My Progress</h1>
+          <p className="text-hexagon-text-secondary text-sm mt-1">See what you've learned and where to focus next.</p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -81,10 +82,10 @@ export default function ProgressPage() {
       {/* Top Telemetry Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Overall Mastery", value: `${masteryPercentage}%`, sub: "+4% this week", icon: Brain, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-          { label: "Current Streak", value: `${profile?.streakDays || 7} Days`, sub: "Personal best: 14", icon: Flame, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+          { label: "Overall Score", value: `${masteryPercentage}%`, sub: "+4% this week", icon: Brain, color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+          { label: "Current Streak", value: `${profile?.streakDays || 0} Days`, sub: "Start a streak today", icon: Flame, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
           { label: "Total Study Time", value: `${totalStudyHours}h ${totalStudyMinutesRem}m`, sub: "Daily target: 30m", icon: Clock, color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/20" },
-          { label: "Mastered Concepts", value: "42", sub: "Out of 54 total", icon: Award, color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
+          { label: "Concepts Learned", value: "0", sub: "Out of 45 total", icon: Award, color: "text-indigo-400", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
         ].map((stat, i) => {
           const Icon = stat.icon;
           return (
@@ -115,8 +116,8 @@ export default function ProgressPage() {
         {/* Radial Mastery Gauge */}
         <div className="bg-hexagon-surface border border-hexagon-border rounded-2xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden backdrop-blur-md">
           <div className="w-full flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-hexagon-text-primary">Cognitive Readiness</h2>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-mono">ADAPTIVE</span>
+            <h2 className="text-sm font-semibold text-hexagon-text-primary">Learning Level</h2>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-mono">ON TRACK</span>
           </div>
 
           <div className="relative w-44 h-44 my-2 flex items-center justify-center">
@@ -151,12 +152,12 @@ export default function ProgressPage() {
             </svg>
             <div className="absolute flex flex-col items-center justify-center">
               <span className="text-4xl font-black tracking-tight text-hexagon-text-primary">{masteryPercentage}%</span>
-              <span className="text-[10px] uppercase font-semibold text-hexagon-text-secondary tracking-wider">Proficient</span>
+              <span className="text-[10px] uppercase font-semibold text-hexagon-text-secondary tracking-wider">On Track</span>
             </div>
           </div>
 
           <p className="text-xs text-hexagon-text-secondary mt-2 max-w-xs leading-relaxed">
-            High retention in <strong className="text-hexagon-text-primary">Neural Networks</strong>. Revisit <strong className="text-orange-400">Gradient Descent</strong> to elevate to 85%+.
+            Strong scores in <strong className="text-hexagon-text-primary">Electricity & Circuits</strong>. Revisit <strong className="text-orange-400">Ohm's Law</strong> to push it over 85%.
           </p>
         </div>
 
@@ -212,7 +213,7 @@ export default function ProgressPage() {
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-hexagon-accent" /> Active Goal Met (30m+)
             </span>
-            <span className="font-mono">320 / 350 min weekly goal</span>
+            <span className="font-mono">0 / 350 min weekly goal</span>
           </div>
         </div>
       </div>
@@ -221,8 +222,8 @@ export default function ProgressPage() {
       <div className="bg-hexagon-surface border border-hexagon-border rounded-2xl p-6 backdrop-blur-md space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-hexagon-text-primary">Subject Mastery Matrix</h2>
-            <p className="text-xs text-hexagon-text-secondary">Granular breakdown of cognitive recall across topics.</p>
+            <h2 className="text-lg font-semibold text-hexagon-text-primary">Your Topics</h2>
+            <p className="text-xs text-hexagon-text-secondary">How well you know each topic you've studied.</p>
           </div>
 
           {/* Filter Pills */}
