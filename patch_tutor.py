@@ -15,7 +15,7 @@ import { useAIIntentStore } from '@/store/useAIIntentStore';
 import { useAudioLipSync } from '@/hooks/useAudioLipSync';
 import LiveAIEngine from '../../../components/shell/LiveAIEngine';
 import ProceduralAvatar from '../../../components/teacher/ProceduralAvatar';
-import { TeachingBoard } from '../../../components/teacher/TeachingBoard';
+import { NeuralNetworkBoard } from '../../../components/teacher/NeuralNetworkBoard';
 
 type StageMode = 'CONVERSATION' | 'LECTURE';
 
@@ -161,10 +161,10 @@ export default function TutorPage() {
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
           <div className="w-full h-full p-2 relative">
-            <TeachingBoard 
+            <NeuralNetworkBoard 
               demoState="evaluate_answer" 
-              resistance={weight} 
-              onResistanceChange={setWeight} 
+              weightValue={weight} 
+              onWeightChange={setWeight} 
             />
             {mode === 'CONVERSATION' && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/20 transition-colors pointer-events-none rounded-2xl">

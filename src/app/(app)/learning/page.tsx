@@ -2,18 +2,16 @@
 import { motion } from 'framer-motion';
 import { BookOpen, TrendingUp, PlayCircle } from 'lucide-react';
 import Link from 'next/link';
-import BackButton from "@/components/ui/BackButton";
 
 const COURSES = [
-  { title: "Electricity & Circuits — Complete Course", subject: "Physics", progress: 34, time: "~1h 20m left", color: "bg-blue-500/20 text-blue-400", border: "border-blue-500/20", href: "/lesson/electricity-1" },
-  { title: "Photosynthesis — From Sunlight to Sugar", subject: "Science", progress: 72, time: "~30m left", color: "bg-emerald-500/20 text-emerald-400", border: "border-emerald-500/20", href: "/lesson/photosynthesis-1" },
+  { title: "Neural Networks - Complete Course", subject: "Computer Science", progress: 34, time: "~1h 20m left", color: "bg-blue-500/20 text-blue-400", border: "border-blue-500/20", href: "/lesson/neural-networks-1" },
+  { title: "Quantum Mechanics Fundamentals", subject: "Physics", progress: 72, time: "~30m left", color: "bg-purple-500/20 text-purple-400", border: "border-purple-500/20", href: "/lesson/quantum-1" },
   { title: "World War II: Global Conflict", subject: "History", progress: 12, time: "~3h 10m left", color: "bg-amber-500/20 text-amber-400", border: "border-amber-500/20", href: "/lesson/history-1" },
 ];
 
 export default function LearningPage() {
   return (
     <div className="max-w-6xl mx-auto p-8 pt-12 space-y-12">
-      <BackButton className="mb-2" />
       <header className="mb-12">
         <h1 className="text-3xl font-semibold text-hexagon-text-primary mb-2">My Learning</h1>
         <p className="text-hexagon-text-secondary">Pick up where you left off.</p>

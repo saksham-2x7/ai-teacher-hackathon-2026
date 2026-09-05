@@ -4,7 +4,6 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF, useAnimations, useFBX } from '@react-three/drei';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useAIIntentStore } from '@/store/useAIIntentStore';
-import type { TeacherState } from '@/types/teacher';
 import { useAudioLipSync } from '@/hooks/useAudioLipSync';
 import { speechSynthesizer } from '@/services/speechSynthesizer';
 import { VisemeName } from '@/utils/phonetics';
@@ -22,12 +21,6 @@ const ALL_OCULUS_VISEMES: VisemeName[] = [
   'viseme_aa', 'viseme_E', 'viseme_I', 'viseme_O', 'viseme_U'
 ];
 
-// Expressiveness states that count as "out loud". Kept as a Set so TypeScript
-// does not narrow `teacherState` to the leftover union and reject later checks.
-const SPEAKING_STATES: ReadonlySet<TeacherState> = new Set<TeacherState>([
-  'speaking', 'teaching', 'correcting', 'celebrating'
-]);
-
 // Inner avatar component wrapped in Suspense
 function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAvatarProps) {
   const { profile } = useAuthStore();
@@ -35,7 +28,11 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
   const { getPhonemeWeights } = useAudioLipSync();
 
   const isMale = profile?.tutorGender === 'male';
-  const isSpeaking = SPEAKING_STATES.has(teacherState);
+  const isSpeaking =
+    teacherState === 'speaking' ||
+    teacherState === 'teaching' ||
+    teacherState === 'correcting' ||
+    teacherState === 'celebrating';
 
   // Authentic Ready Player Me human avatars
   const modelUrl = isMale ? '/models/alex_v2.glb' : '/models/aria_v2.glb';
@@ -183,26 +180,6 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
     const delta = Math.min(rawDelta, 0.05);
     const t = state.clock.elapsedTime;
 
-    // 0. Whole-body presence: gentle idle sway, forward-lean while teaching,
-    //    subtle body-bounce while speaking, playful energy when celebrating
-    if (groupRef.current) {
-      const isTeachingActive = isSpeaking || teacherState === 'teaching';
-      const isCelebrating = teacherState === 'celebrating';
-      const swayYaw = Math.sin(t * 0.7) * 0.012;
-      const swayRoll = Math.sin(t * 0.55) * 0.008;
-      const lean = isTeachingActive ? -0.04 : 0;
-      const bodyBounce = isCelebrating
-        ? Math.abs(Math.sin(t * 6)) * 0.025
-        : isSpeaking
-          ? Math.abs(Math.sin(t * 7)) * 0.006
-          : 0;
-
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, swayYaw, delta * 3);
-      groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, lean, delta * 3);
-      groupRef.current.rotation.z = THREE.MathUtils.lerp(groupRef.current.rotation.z, swayRoll, delta * 3);
-      groupRef.current.position.y = THREE.MathUtils.lerp(groupRef.current.position.y, bodyBounce, delta * 5);
-    }
-
     // 1. Natural Breathing (Spine & Neck subtle expansion)
     if (spineRef.current) {
       const breath = Math.sin(t * 1.8) * 0.015;
@@ -226,10 +203,9 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
         targetRoll = 0.05;
       }
 
-      // Add gentle organic micro-movements + speech head nod + listening acknowledgment
+      // Add gentle organic micro-movements + speech head nod
       const isSpeakingActive = speechSynthesizer.getIsSpeaking() || isSpeaking;
       const speechNod = isSpeakingActive ? Math.sin(t * 7) * 0.025 : 0;
-      const listeningNod = teacherState === 'listening' ? Math.abs(Math.sin(t * 4.5)) * 0.03 : 0;
       const microSwayYaw = Math.sin(t * 0.9) * 0.015;
       const microSwayPitch = Math.cos(t * 1.2) * 0.01;
 
@@ -242,7 +218,7 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
       ) || 0;
       headRef.current.rotation.x = THREE.MathUtils.lerp(
         headRef.current.rotation.x || 0,
-        0.02 - (state.pointer.y * Math.PI) / 18 + microSwayPitch + speechNod + listeningNod,
+        0.02 - (state.pointer.y * Math.PI) / 18 + microSwayPitch + speechNod,
         delta * 4.5
       ) || 0;
       headRef.current.rotation.z = THREE.MathUtils.lerp(
@@ -281,8 +257,8 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
       const audioPhonemes = getPhonemeWeights();
       const hasExternalAudio = audioPhonemes.volume > 0.02;
 
-      // Mouths only move when there is REAL audio — no procedural fake speech
-      const isArticulating = isSynthSpeaking || hasExternalAudio;
+      // Check if currently articulating
+      const isArticulating = isSynthSpeaking || hasExternalAudio || isSpeaking;
 
       // Track each of the 15 Oculus visemes with organic co-articulation lerping
       for (const viseme of ALL_OCULUS_VISEMES) {
@@ -301,8 +277,13 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
           } else if (viseme === 'viseme_I' || viseme === 'viseme_SS') {
             target = audioPhonemes.consonant;
           }
+        } else if (isSpeaking) {
+          // Graceful procedural syllable fallback
+          const syl = Math.abs(Math.sin(t * 8) * Math.cos(t * 12));
+          if (viseme === 'viseme_aa') target = syl * 0.7;
+          if (viseme === 'viseme_O') target = Math.abs(Math.sin(t * 5)) * 0.4;
+          if (viseme === 'viseme_I') target = Math.abs(Math.cos(t * 7)) * 0.3;
         }
-        // NOTE: no teacherState-only fallback — silence = closed mouth.
 
         const current = currentVisemeWeights.current[viseme] || 0;
         const nextVal = THREE.MathUtils.lerp(current, target, delta * 26);
@@ -325,9 +306,10 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
         else if (activeCue.viseme === 'viseme_PP' || activeCue.viseme === 'viseme_sil') targetMouthOpen = 0;
         else targetMouthOpen = 0.22;
       } else if (hasExternalAudio) {
-        targetMouthOpen = Math.min(audioPhonemes.openness * 0.9 + audioPhonemes.volume * 0.4, 1.0);
+        targetMouthOpen = audioPhonemes.openness * 0.9;
+      } else if (isSpeaking) {
+        targetMouthOpen = Math.abs(Math.sin(t * 8) * Math.cos(t * 12)) * 0.65;
       }
-      // NOTE: no teacherState-only fallback — silence = closed mouth.
 
       smoothedMouthOpenRef.current = THREE.MathUtils.lerp(smoothedMouthOpenRef.current, targetMouthOpen, delta * 26);
       const mouthOpenIdx = dict['mouthOpen'];
@@ -355,7 +337,7 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
       if (jawRef.current) {
         jawRef.current.rotation.x = THREE.MathUtils.lerp(
           jawRef.current.rotation.x,
-          smoothedMouthOpenRef.current * 0.14,
+          smoothedMouthOpenRef.current * 0.08,
           delta * 20
         );
       }

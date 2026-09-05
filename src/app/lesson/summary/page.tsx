@@ -4,14 +4,12 @@ import { CheckCircle, ArrowRight, Zap, Target, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '../../../components/ui/button';
 import { Progress } from '../../../components/ui/progress';
-import BackButton from '../../../components/ui/BackButton';
 
 export default function LessonSummaryPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Background ambient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[150px] pointer-events-none" />
-      <BackButton className="absolute top-6 left-6 z-20" href="/home" />
 
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -25,7 +23,7 @@ export default function LessonSummaryPage() {
           </div>
           <h1 className="text-4xl font-bold mb-4 tracking-tight">Lesson Complete</h1>
           <p className="text-muted-foreground text-lg max-w-lg">
-            You successfully completed the module on <span className="text-white font-medium">Electricity & Circuits</span>.
+            You successfully completed the module on <span className="text-white font-medium">Neural Network Weight Updates</span>.
           </p>
         </div>
 
@@ -33,7 +31,7 @@ export default function LessonSummaryPage() {
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center">
             <Target className="text-primary mb-3" size={24} />
             <div className="text-3xl font-bold font-mono text-white mb-1">85%</div>
-            <div className="text-xs text-white/50 uppercase tracking-widest font-mono">Score</div>
+            <div className="text-xs text-white/50 uppercase tracking-widest font-mono">Mastery</div>
           </div>
           
           <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center">
@@ -53,7 +51,7 @@ export default function LessonSummaryPage() {
           <h3 className="text-lg font-medium mb-4">Areas to Review</h3>
           <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-center gap-4">
             <Progress value={48} className="w-32 h-1.5 [&>div]:bg-destructive" />
-            <span className="font-medium flex-1">Ohm's Law & resistance</span>
+            <span className="font-medium flex-1">Backpropagation chain rule</span>
             <Button variant="outline" size="sm" className="border-destructive/30 hover:bg-destructive/20 text-destructive">
               Review Module
             </Button>

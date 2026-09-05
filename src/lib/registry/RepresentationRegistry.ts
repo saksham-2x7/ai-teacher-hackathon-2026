@@ -9,35 +9,35 @@ type RepresentationEntry = {
 
 const registry: Record<string, RepresentationEntry> = {
   webgl: {
-    metadata: { id: 'webgl', name: 'Flow Chart', description: 'A colourful flowchart of the idea', capabilities: ['read', 'loop'] },
+    metadata: { id: 'webgl', name: '3D Simulation', description: 'Interactive WebGL environment', capabilities: ['orbit', 'zoom', 'focus'] },
     component: dynamic(() => import('../../components/representations/WebGLRepresentation'), { ssr: false })
   },
   node: {
-    metadata: { id: 'node', name: 'Concept Map', description: 'Map how ideas link together', capabilities: ['pan', 'zoom', 'drag', 'connect'] },
+    metadata: { id: 'node', name: 'Concept Graph', description: 'Node-based concept mapping', capabilities: ['pan', 'zoom', 'drag', 'connect'] },
     component: dynamic(() => import('../../components/representations/NodeCanvasRepresentation'), { ssr: false })
   },
   graph: {
-    metadata: { id: 'graph', name: 'Graph', description: 'Charts and number plots', capabilities: ['plot', 'hover', 'compare'] },
+    metadata: { id: 'graph', name: 'Data Graph', description: '2D mathematical and data plotting', capabilities: ['plot', 'hover', 'compare'] },
     component: dynamic(() => import('../../components/representations/GraphRepresentation'), { ssr: false })
   },
   timeline: {
-    metadata: { id: 'timeline', name: 'Timeline', description: 'See the story unfold in order', capabilities: ['scroll', 'focus'] },
+    metadata: { id: 'timeline', name: 'Chronological Timeline', description: 'Event sequence visualization', capabilities: ['scroll', 'focus'] },
     component: dynamic(() => import('../../components/representations/TimelineRepresentation'), { ssr: false })
   },
   diagram: {
-    metadata: { id: 'diagram', name: 'Diagram', description: 'Step-by-step labelled diagram', capabilities: ['read', 'step'] },
+    metadata: { id: 'diagram', name: 'System Diagram', description: 'Structured visual diagram', capabilities: ['pan', 'zoom', 'highlight'] },
     component: dynamic(() => import('../../components/representations/DiagramRepresentation'), { ssr: false })
   },
   manipulation: {
-    metadata: { id: 'manipulation', name: 'Hands-On Activity', description: 'Interactive drag-and-drop workspace', capabilities: ['drag', 'drop', 'assemble'] },
+    metadata: { id: 'manipulation', name: 'Direct Manipulation', description: 'Interactive drag-and-drop workspace', capabilities: ['drag', 'drop', 'assemble'] },
     component: dynamic(() => import('../../components/representations/ManipulationRepresentation'), { ssr: false })
   },
   code: {
-    metadata: { id: 'code', name: 'Code Example', description: 'See it work step by step in a script', capabilities: ['read', 'scroll', 'execute'] },
+    metadata: { id: 'code', name: 'Code Demonstration', description: 'Code execution and architecture diagram', capabilities: ['read', 'scroll', 'execute'] },
     component: dynamic(() => import('../../components/representations/CodeRepresentation'), { ssr: false })
   },
   text: {
-    metadata: { id: 'text', name: 'Structured Text', description: 'Textual explanation', capabilities: ['read', 'scroll'] },
+    metadata: { id: 'text', name: 'Structured Text', description: 'Textual explanation fallback', capabilities: ['read', 'scroll'] },
     component: dynamic(() => import('../../components/representations/TextRepresentation'), { ssr: false })
   }
 };

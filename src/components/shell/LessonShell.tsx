@@ -1,7 +1,7 @@
 'use client';
 import { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import LessonHUD, { LessonChatFooter } from './LessonHUD';
+import LessonHUD from './LessonHUD';
 import AITeacherPiP from '../teacher/AITeacherPiP';
 import LiveAIEngine from './LiveAIEngine';
 import QuestionPanel from '../../features/assessment/QuestionPanel';
@@ -9,48 +9,40 @@ import { useAIIntentStore } from '../../store/useAIIntentStore';
 import { useShallow } from 'zustand/react/shallow';
 
 export default function LessonShell({ children }: { children: ReactNode }) {
-  const activeQuestion = useAIIntentStore(
-    useShallow(state => state.activeQuestion)
+  const { activeQuestion } = useAIIntentStore(
+    useShallow(state => ({
+      activeQuestion: state.activeQuestion
+    }))
   );
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden brut-bg font-sans">
-      {/* Header (in flow, no absolute overlay) */}
-      <LessonHUD />
-
-      {/* Body: stage left + avatar rail right */}
-      <div data-slot="main" className="flex-1 min-h-0 flex flex-row gap-4 px-4 pb-4">
-        {/* Stage */}
-        <div className="flex-1 min-w-0 flex flex-col min-h-0 gap-4">
-          <div data-slot="stage" className="flex-1 min-h-0 relative overflow-hidden rounded-xl border-[3px] border-black shadow-[6px_6px_0_#000] bg-black">
-            {children}
-          </div>
-
-          {/* Question dock — sits below the stage, never overlaps */}
-          <AnimatePresence>
-            {activeQuestion && (
-              <motion.div
-                key="question-dock"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 12 }}
-                className="shrink-0"
-              >
-                <QuestionPanel question={activeQuestion} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Avatar rail — captions scroll inside, avatar never hidden */}
-        <div data-slot="rail" className="w-80 xl:w-96 shrink-0 min-h-0 flex flex-col overflow-hidden">
-          <AITeacherPiP />
-        </div>
+    <div className="flex h-screen w-full bg-[#030409] text-white overflow-hidden font-sans relative selection:bg-indigo-500/30">
+      {/* Deep Space Background / Noise */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] mix-blend-overlay"></div>
+        <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-indigo-900/10 to-transparent blur-3xl opacity-50" />
       </div>
 
-      {/* Chat footer at the very bottom */}
-      <LessonChatFooter />
+      <LessonHUD />
+      <main className="absolute inset-0 z-10">
+        {children}
+      </main>
+      
+      {/* Assessment Overlay */}
+      <AnimatePresence>
+        {activeQuestion && (
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            className="absolute left-10 top-1/2 -translate-y-1/2 z-30"
+          >
+            <QuestionPanel question={activeQuestion} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      <AITeacherPiP />
       <LiveAIEngine />
     </div>
   );

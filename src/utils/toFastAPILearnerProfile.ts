@@ -1,46 +1,51 @@
 import { LearnerProfile as AuthLearnerProfile } from '../store/useAuthStore';
 
-export interface BackendLearnerProfile {
-  student_id: string | null;
-  educational_level: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-  target_subject: string;
-  available_time_minutes: number;
-  preferred_language: string;
-  learning_style: 'CONCEPTUAL' | 'PRACTICAL' | 'ANALYTICAL';
+export interface FastAPILearnerProfile {
+  learner_id: string;
+  name: string;
+  topic: string;
+  depth_level: number;
+  learning_style: 'visual' | 'kinesthetic' | 'auditory' | 'reading';
+  tutor_gender: 'female' | 'male';
+  scaffold_level: number;
+  preferences: {
+    language: string;
+    daily_goal_minutes: number;
+    level: string;
+    streak_days: number;
+  };
 }
-
-export interface CreateSessionPayload {
-  learner_profile: BackendLearnerProfile;
-  current_topic: string;
-  material_id?: string | null;
-}
-
-const LEVEL_TO_EDUCATIONAL: Record<string, 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'> = {
-  beginner: 'BEGINNER',
-  intermediate: 'INTERMEDIATE',
-  advanced: 'ADVANCED'
-};
 
 /**
- * Serializes the frontend onboarding profile into the exact JSON body the
- * backend expects for POST /api/v1/sessions:
- *   { learner_profile: LearnerProfile, current_topic, material_id? }
+ * Transformer to serialize frontend onboarding profile state
+ * into the exact FastAPI JSON schema required by backend /api/v1/sessions
  */
 export function toFastAPILearnerProfile(
   profile: Partial<AuthLearnerProfile> | null,
-  topicGoal: string = 'Photosynthesis'
-): CreateSessionPayload {
+  topicGoal: string = 'Neural Networks'
+): FastAPILearnerProfile {
+  const levelToDepth: Record<string, number> = {
+    beginner: 1,
+    intermediate: 2,
+    advanced: 3
+  };
+
   const level = profile?.level || 'beginner';
+  const depthLevel = levelToDepth[level] || 1;
 
   return {
-    learner_profile: {
-      student_id: profile?.email ? btoa(profile.email).replace(/=/g, '').slice(0, 16) : null,
-      educational_level: LEVEL_TO_EDUCATIONAL[level] || 'BEGINNER',
-      target_subject: topicGoal,
-      available_time_minutes: profile?.dailyGoalMinutes || 30,
-      preferred_language: profile?.language || 'en',
-      learning_style: 'CONCEPTUAL'
-    },
-    current_topic: topicGoal
+    learner_id: profile?.email ? btoa(profile.email).replace(/=/g, '').slice(0, 16) : `user_${Date.now()}`,
+    name: profile?.name || 'Learner',
+    topic: topicGoal || 'Neural Networks',
+    depth_level: depthLevel,
+    learning_style: 'visual',
+    tutor_gender: profile?.tutorGender === 'male' ? 'male' : 'female',
+    scaffold_level: 3, // High scaffolding default for new concepts
+    preferences: {
+      language: profile?.language || 'en',
+      daily_goal_minutes: profile?.dailyGoalMinutes || 30,
+      level: level,
+      streak_days: profile?.streakDays || 1
+    }
   };
 }

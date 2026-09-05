@@ -3,18 +3,19 @@
     "virtual-hawks-backend": {
       "root": ".",
       "framework": "nextjs"
+    },
+    "virtual-hawks-api": {
+      "root": "api",
+      "framework": "python"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/(.*)",
       "destination": {
         "type": "service",
-        "service": "virtual-hawks-backend"
+        "service": "virtual-hawks-api",
+        "path": "/api/$1"
       }
     }
   ]

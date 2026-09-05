@@ -4,8 +4,8 @@ import { SmoothScrollProvider } from "@/components/providers/SmoothScrollProvide
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HEXAGON | Your Personal AI Teacher",
-  description: "A personal AI teacher that explains, asks questions, and adapts lessons to how you learn best.",
+  title: "HEXAGON | Learning that changes shape",
+  description: "A polymorphic learning interface that adapts to your cognitive state in real-time.",
 };
 
 export const viewport: Viewport = {

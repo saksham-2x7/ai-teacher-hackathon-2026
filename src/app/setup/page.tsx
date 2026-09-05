@@ -1,270 +1,189 @@
 'use client';
-import { useState, useEffect, useRef, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Clock, Upload, X, CheckCircle, Loader2, FileText, Hexagon, ArrowRight, Home } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, BrainCircuit, Waves, UploadCloud, ChevronRight } from 'lucide-react';
 import { LearnerProfile } from '../../types/learner';
 import { toFastAPILearnerProfile } from "@/utils/toFastAPILearnerProfile";
 import { liveSSEClient } from "@/services/liveSSEClient";
-import { useAIIntentStore } from "@/store/useAIIntentStore";
-import Link from 'next/link';
 
-const TOPIC_SUGGESTIONS = [
-  'Photosynthesis',
-  'Electricity & Circuits',
-  'Newton\'s Laws of Motion',
-  'Chemical Reactions',
-  'Solar System & Planets',
-  'Fractions & Percentages',
-  'World War 2',
-  'Computer Programming Basics'
-];
-
-const TIME_OPTIONS = [10, 15, 20, 30, 45];
-
-function topicSlug(topic: string): string {
-  const s = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  return s || 'lesson';
-}
-
-function SetupPage() {
+export default function SetupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const setActiveTopic = useAIIntentStore(s => s.setActiveTopic);
-
   const [topic, setTopic] = useState('');
-  const [minutes, setMinutes] = useState<number | null>(20);
-  const [materialFile, setMaterialFile] = useState<{ name: string; fileId: string } | null>(null);
-  const [materialState, setMaterialState] = useState<'idle' | 'uploading' | 'processing' | 'ready' | 'error'>('idle');
-  const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isStarting, setIsStarting] = useState(false);
+  const [depth, setDepth] = useState(3);
+  const [learningStyle, setLearningStyle] = useState('visual');
+  const [hasMaterials, setHasMaterials] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
-    const q = searchParams?.get('topic');
-    if (q) setTopic(q);
-  }, [searchParams]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
-  const processFile = async (selectedFile: File) => {
-    setMaterialState('uploading');
-    try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('student_id', 'demo_student');
-
-      const res = await fetch('/api/v1/materials/upload', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
-      const fileId = data.file_id;
-      setMaterialFile({ name: selectedFile.name, fileId });
-
-      setMaterialState('processing');
-      const poll = setInterval(async () => {
-        try {
-          const statusRes = await fetch(`/api/v1/materials/${fileId}`);
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
-            if (statusData.status === 'ready' || statusData.status === 'READY') {
-              clearInterval(poll);
-              setMaterialState('ready');
-            } else if (statusData.status === 'processing' || statusData.status === 'PROCESSING') {
-              setMaterialState('processing');
-            }
-          }
-        } catch { /* ignore */ }
-      }, 1000);
-    } catch (err) {
-      console.error(err);
-      setMaterialState('error');
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]);
-  };
-
-  const startLesson = async () => {
-    if (isStarting) return;
-    setIsStarting(true);
-    const resolvedTopic = topic.trim() || 'Photosynthesis';
-    setActiveTopic(resolvedTopic);
-
+    setIsInitializing(true);
     const profile: LearnerProfile = {
-      topic: resolvedTopic,
-      depthLevel: 3,
+      topic,
+      depthLevel: depth,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      learningStyle: 'visual' as any,
-      hasMaterials: !!materialFile,
+      learningStyle: learningStyle as any,
+      hasMaterials,
     };
-
+    
+    // Convert new UI variables to match what the transformer expects
+    // depth 1-5 maps to beginner/intermediate/advanced
+    const mappedLevel = depth <= 2 ? 'beginner' : depth >= 4 ? 'advanced' : 'intermediate';
+    
     const fastApiPayload = toFastAPILearnerProfile(
-      { ...profile, level: 'intermediate', tutorGender: 'female', dailyGoalMinutes: minutes || 20 },
-      resolvedTopic
+      { ...profile, level: mappedLevel, tutorGender: 'female', dailyGoalMinutes: 20 },
+      topic || "Neural Networks"
     );
 
     let sessionId = `session_${Date.now()}`;
     try {
-      sessionId = await liveSSEClient.createSession({
-        ...fastApiPayload,
-        material_id: materialFile?.fileId || null
-      });
+      sessionId = await liveSSEClient.createSession(fastApiPayload);
     } catch (e) {
       console.warn("Session initiation error:", e);
     }
 
-    router.push(`/lesson/${topicSlug(resolvedTopic)}?sessionId=${encodeURIComponent(sessionId)}`);
+    // Cinematic planning transition
+    setTimeout(() => {
+      router.push(`/lesson/plan-generation?topic=${encodeURIComponent(topic || "Neural Networks")}&sessionId=${encodeURIComponent(sessionId)}`);
+    }, 1500);
   };
+
+  const spring = { type: "spring", stiffness: 300, damping: 30 };
 
   if (!mounted) return null;
 
-  const materialStatusText =
-    materialState === 'uploading' ? 'Reading material...' :
-    materialState === 'processing' ? 'Building concept map...' :
-    materialState === 'ready' ? 'INDEXED — lesson will use it' : '';
-
   return (
-    <div className="min-h-screen brut-bg flex flex-col items-center justify-center px-6 py-10 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'url("/noise.svg")' }} />
+    <div className="min-h-screen bg-[#030303] text-white flex items-center justify-center font-sans overflow-hidden relative selection:bg-purple-500/30">
+      
+      {/* Ambient noise & grid layer */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }} />
+      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]" />
 
-      <Link href="/home" className="absolute top-6 left-6 z-20 brut-btn brut-secondary px-4 py-2 text-xs flex items-center gap-1.5">
-        <Home className="w-4 h-4" /> HOME
-      </Link>
+      {/* Dynamic Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-xl relative z-10"
+      <motion.div 
+        initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }}
+        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-md relative z-10 p-6"
       >
-        <div className="flex items-center gap-3 mb-4">
-          <span className="w-10 h-10 brut-card brut-hex flex items-center justify-center rotate-45">
-            <Hexagon className="w-5 h-5 -rotate-45 text-black" />
-          </span>
-          <h1 className="text-4xl font-black tracking-tighter text-black">NEW LESSON</h1>
-        </div>
-
-        <div className="brut-card p-6 space-y-6">
-          {/* TOPIC */}
-          <div className="space-y-3">
-            <label className="brut-tag">What do you want to learn?</label>
-            <input
-              type="text"
-              autoFocus
-              value={topic}
-              onChange={e => setTopic(e.target.value)}
-              placeholder="e.g. Photons, the Vietnam War, Algebra..."
-              className="brut-input w-full px-5 py-4 text-lg font-bold"
-            />
-            <div className="flex flex-wrap gap-2">
-              {TOPIC_SUGGESTIONS.map(s => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setTopic(s)}
-                  className={`brut-chip px-3 py-1.5 text-xs ${topic === s ? 'brut-chip-on' : ''}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* MATERIAL (optional) */}
-          <div className="space-y-3">
-            <label className="brut-tag">Notes? (optional)</label>
-            {!materialFile && materialState !== 'error' && (
-              <div
-                className="border-[3px] border-dashed border-black rounded-xl p-6 text-center cursor-pointer bg-white"
-                onDragEnter={e => { e.preventDefault(); }}
-                onDragOver={e => { e.preventDefault(); }}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.docx,.txt,.pptx"
-                  onChange={e => { if (e.target.files?.[0]) processFile(e.target.files[0]); }}
-                />
-                <Upload className="w-8 h-8 mx-auto mb-2 text-black" />
-                <p className="text-sm font-bold text-black">Drop a PDF / DOCX / TXT / PPTX to ground your lesson.</p>
+        <div className="relative group">
+          {/* Outer Glass Bezel */}
+          <div className="absolute -inset-px bg-gradient-to-b from-white/20 to-white/0 rounded-[32px] p-px opacity-50" />
+          
+          <div className="relative bg-[#07090E]/80 backdrop-blur-3xl border border-white/10 rounded-[32px] p-8 shadow-2xl">
+            <div className="flex justify-center mb-8">
+              <div className="p-3 bg-white/5 rounded-2xl border border-white/10 shadow-inner">
+                <Sparkles className="w-6 h-6 text-purple-400" />
               </div>
-            )}
+            </div>
+            
+            <h1 className="text-2xl font-semibold text-center tracking-tight mb-2">Initialize Learner</h1>
+            <p className="text-gray-500 text-center text-sm mb-8">Configure your polymorphic AI tutor environment</p>
 
-            {materialFile && materialState !== 'error' && (
-              <div className="flex items-center gap-3 border-[3px] border-black rounded-xl p-4 bg-white shadow-[4px_4px_0_#000]">
-                <FileText className="w-6 h-6 text-black shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-black truncate">{materialFile.name}</p>
-                  <p className="text-[11px] font-mono uppercase tracking-wider text-black/60">{materialStatusText}</p>
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Core Topic */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.2em] ml-1">Learning Target</label>
+                <div className="relative group/input">
+                  <input 
+                    type="text" 
+                    required
+                    value={topic}
+                    onChange={e => setTopic(e.target.value)}
+                    placeholder="e.g. Backpropagation..."
+                    className="w-full bg-[#030303] border border-white/10 rounded-2xl py-4 px-5 text-sm outline-none focus:border-purple-500/50 focus:bg-[#0A0A0A] transition-all placeholder-gray-700 shadow-inner"
+                  />
                 </div>
-                {materialState === 'ready'
-                  ? <CheckCircle className="w-6 h-6 text-black shrink-0" />
-                  : <Loader2 className="w-6 h-6 text-black animate-spin shrink-0" />}
-                <button type="button" onClick={() => { setMaterialFile(null); setMaterialState('idle'); }} className="text-black/60 hover:text-black p-1">
-                  <X className="w-4 h-4" />
-                </button>
               </div>
-            )}
 
-            {materialState === 'error' && (
-              <div className="flex items-center justify-between border-[3px] border-black rounded-xl p-4 bg-white shadow-[4px_4px_0_#000]">
-                <span className="text-sm font-bold text-black">Upload failed.</span>
-                <button type="button" onClick={() => setMaterialState('idle')} className="brut-chip px-3 py-1 text-xs">Try again</button>
+              {/* Depth Slider */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.2em]">Ontological Depth</label>
+                  <span className="text-[10px] text-purple-400 font-mono bg-purple-500/10 px-2 py-0.5 rounded">Level {depth}</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="1" 
+                  max="5" 
+                  value={depth}
+                  onChange={(e) => setDepth(Number(e.target.value))}
+                  className="w-full accent-purple-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-gray-600 font-medium px-1 uppercase tracking-wider">
+                  <span>Layman</span>
+                  <span>Academic</span>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* TIME */}
-          <div className="space-y-3">
-            <label className="brut-tag">How much time?</label>
-            <div className="grid grid-cols-5 gap-2">
-              {TIME_OPTIONS.map(m => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMinutes(m)}
-                  className={`brut-chip flex flex-col items-center gap-0.5 py-3 rounded-xl ${minutes === m ? 'brut-chip-on' : ''}`}
-                >
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm font-black">{m}</span>
-                  <span className="text-[9px] font-mono uppercase">min</span>
-                </button>
-              ))}
-            </div>
-          </div>
+              {/* Learning Style */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-[0.2em] ml-1">Learning Matrix</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'visual', icon: Waves, label: 'Visual' },
+                    { id: 'analytical', icon: BrainCircuit, label: 'Analytical' }
+                  ].map((style) => {
+                    const isSelected = learningStyle === style.id;
+                    return (
+                      <button
+                        key={style.id}
+                        type="button"
+                        onClick={() => setLearningStyle(style.id)}
+                        className={`relative flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 ${isSelected ? 'border-purple-500/50 bg-purple-500/10 text-white' : 'border-white/5 bg-white/[0.02] text-gray-500 hover:bg-white/[0.04] hover:text-gray-300'}`}
+                      >
+                        <style.icon className={`w-5 h-5 mb-2 ${isSelected ? 'text-purple-400' : 'opacity-60'}`} />
+                        <span className="text-xs font-medium tracking-wide">{style.label}</span>
+                        {isSelected && (
+                          <motion.div 
+                            layoutId="style-active" 
+                            className="absolute inset-0 rounded-2xl border border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)]" 
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            transition={spring as any} 
+                          />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
 
-          {/* START */}
-          <button
-            onClick={startLesson}
-            disabled={isStarting}
-            className="brut-btn brut-primary w-full py-5 text-xl flex items-center justify-center gap-3"
-          >
-            {isStarting ? (
-              <span className="flex items-center gap-3"><Loader2 className="w-5 h-5 animate-spin" /> Preparing your teacher...</span>
-            ) : (
-              <span className="flex items-center gap-3">START LESSON <ArrowRight className="w-6 h-6" /></span>
-            )}
-          </button>
-          {topic.trim() && (
-            <p className="text-center text-[11px] font-mono uppercase tracking-widest text-black/60">
-              Teaching: {topic.trim()} · {minutes || 20} min{materialFile?.fileId ? ' · grounded on your notes' : ''}
-            </p>
-          )}
+              {/* Submit Button */}
+              <button 
+                type="submit" 
+                disabled={isInitializing}
+                className="group relative w-full overflow-hidden rounded-2xl bg-white text-black font-semibold text-sm tracking-wide h-14 transition-transform active:scale-[0.98]"
+              >
+                <div className="absolute inset-0 flex items-center justify-center gap-2">
+                  {isInitializing ? (
+                    <motion.div 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }}
+                      className="flex items-center gap-2"
+                    >
+                      <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                      <span>Syncing Neural Mesh...</span>
+                    </motion.div>
+                  ) : (
+                    <>
+                      <span>DEPLOY TEACHER</span>
+                      <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
+                </div>
+              </button>
+            </form>
+          </div>
         </div>
       </motion.div>
     </div>
-  );
-}
-
-export default function SetupPageWrapped() {
-  return (
-    <Suspense fallback={<div className="brut-bg h-screen w-full flex items-center justify-center"><p className="brut-card bg-white px-6 py-4 font-black font-mono text-sm">Loading…</p></div>}>
-      <SetupPage />
-    </Suspense>
   );
 }

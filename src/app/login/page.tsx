@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, ArrowRight, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
-import BackButton from '@/components/ui/BackButton';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
@@ -19,15 +18,15 @@ const GoogleIcon = () => (
 
 const TESTIMONIALS = [
   {
-    quote: 'HEXAGON explained photosynthesis in a way that finally made sense to me. It switched to Hindi mid-lesson when it saw I was stuck.',
+    quote: 'HEXAGON explained recursion in a way my professor never could. It switched to Hindi mid-session when it sensed I was struggling.',
     author: 'Priya Sharma',
-    role: 'Science Student, Class 10',
+    role: 'CS Student, IIT Bombay',
     initials: 'PS',
   },
   {
-    quote: 'I went from dreading physics to actually enjoying circuits. The AI teacher explains once, checks my understanding, and re-teaches until it clicks.',
+    quote: 'I went from beginner to shipping my first ML model in 6 weeks. The AI adapts faster than any human tutor I have had.',
     author: 'Rohan Mehta',
-    role: 'High School Student',
+    role: 'Self-taught Engineer',
     initials: 'RM',
   },
 ];
@@ -88,8 +87,7 @@ export default function LoginPage() {
   const testimonial = TESTIMONIALS[testimonialIndex];
 
   return (
-    <div className="min-h-screen flex dark bg-[#050505] text-white relative">
-        <BackButton className="absolute top-6 left-6 z-20" href="/home" />
+    <div className="min-h-screen flex dark bg-[#050505] text-white">
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-[#050505] via-[#0a1a12] to-[#050505]">
         <HexPattern />
@@ -113,10 +111,10 @@ export default function LoginPage() {
             <span className="text-[#00FF9D]">like a human.</span>
           </h1>
           <p className="text-white/50 text-lg leading-relaxed max-w-md">
-            Adaptive, multilingual, and endlessly patient. HEXAGON adapts to how you learn best, one lesson at a time.
+            Adaptive, multilingual, and brutally effective. HEXAGON senses how you learn and reshapes itself around you.
           </p>
           <div className="mt-10 flex gap-8">
-            {[{ value: '94%', label: 'retention rate' }, { value: '6×', label: 'faster learning' }, { value: '12+', label: 'languages' }].map((stat) => (
+            {[{ value: '94%', label: 'retention rate' }, { value: '6×', label: 'faster mastery' }, { value: '12+', label: 'languages' }].map((stat) => (
               <div key={stat.label}>
                 <div className="text-2xl font-bold text-[#00FF9D]">{stat.value}</div>
                 <div className="text-xs text-white/40 mt-0.5">{stat.label}</div>

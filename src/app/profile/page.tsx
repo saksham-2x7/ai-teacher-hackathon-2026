@@ -20,8 +20,8 @@ const LANGUAGE_OPTIONS = [
 ];
 
 const TUTORS = [
-  { id: "female", name: "ARIA", tagline: "Patient, warm, and encouraging", color: "from-purple-500/20 to-pink-500/10", accent: "purple" },
-  { id: "male", name: "ALEX", tagline: "Clear, practical, and motivating", color: "from-blue-500/20 to-cyan-500/10", accent: "blue" },
+  { id: "female", name: "ARIA", tagline: "Patient, warm, and Socratic", color: "from-purple-500/20 to-pink-500/10", accent: "purple" },
+  { id: "male", name: "ALEX", tagline: "Direct, rigorous, and encouraging", color: "from-blue-500/20 to-cyan-500/10", accent: "blue" },
 ];
 
 export default function ProfilePage() {

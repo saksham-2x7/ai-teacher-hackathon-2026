@@ -1,62 +1,10 @@
-import { CreateSessionPayload } from '../utils/toFastAPILearnerProfile';
+import { FastAPILearnerProfile } from '../utils/toFastAPILearnerProfile';
 import { LessonPhase, RepresentationId } from '../types/orchestration';
 import { TeacherState } from '../types/teacher';
 import { QuestionProps } from '../features/assessment/QuestionPanel';
 import { speechSynthesizer } from './speechSynthesizer';
 
-const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || '').replace(/\/+$/, '');
-
-// Dev's Next proxy buffers text/event-stream for browser connections, so the
-// SSE client talks to the backend directly and relies on its "*" CORS config.
-const STREAM_BASE = BACKEND_URL || 'http://127.0.0.1:8000';
-
-// Maps the backend's pedagogic visual-intent type onto the representation
-// available in the frontend registry.
-const VISUAL_TYPE_TO_REPRESENTATION: Record<string, RepresentationId> = {
-  text: 'text',
-  equation: 'text',
-  diagram_ref: 'diagram',
-  diagram: 'diagram',
-  code: 'code',
-  timeline: 'timeline',
-};
-
-// Maps backend TeachingState enum values onto the frontend teacher personality states.
-const TEACHER_STATE_MAP: Record<string, TeacherState> = {
-  IDLE: 'idle',
-  LISTENING: 'listening',
-  THINKING: 'thinking',
-  TEACHING: 'teaching',
-  CORRECTING: 'correcting',
-  CELEBRATING: 'celebrating',
-  PAUSED: 'paused',
-  'WAIT_FOR_ANSWER': 'waiting',
-  'AWAITING_STUDENT_INPUT': 'waiting'
-};
-
-export function mapBackendTeacherState(raw: string | null | undefined): TeacherState {
-  return TEACHER_STATE_MAP[String(raw ?? '').toUpperCase()] || 'speaking';
-}
-
-export function mapBackendVisualType(type: string | null | undefined): RepresentationId | undefined {
-  if (!type) return undefined;
-  const repr = VISUAL_TYPE_TO_REPRESENTATION[type];
-  return repr || (type as RepresentationId);
-}
-
-export function mapInteractivePromptToQuestion(prompt: unknown): QuestionProps | null {
-  if (!prompt || typeof prompt !== 'object') return null;
-  const p = prompt as { prompt_type?: string; question_text?: string; options?: string[] };
-  if (!p.question_text) return null;
-
-  const isMcq = p.prompt_type === 'mcq';
-  return {
-    id: `q_${Date.now()}`,
-    type: isMcq ? 'multiple_choice' : 'hypothesis',
-    prompt: p.question_text,
-    options: isMcq ? p.options || [] : undefined
-  };
-}
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 export interface BackendTeachingTurn {
   phase?: LessonPhase;
@@ -71,7 +19,6 @@ export interface BackendVisualIntent {
   representation?: RepresentationId;
   scaffold_level?: number;
   focus_target_id?: string | null;
-  payload?: string;
 }
 
 export interface SSECallbacks {
@@ -90,21 +37,8 @@ class LiveSSEManager {
   /**
    * Register or initiate an educator session with FastAPI backend.
    */
-  public async createSession(profilePayload: CreateSessionPayload): Promise<string> {
+  public async createSession(profilePayload: FastAPILearnerProfile): Promise<string> {
     const endpoint = `${BACKEND_URL}/api/v1/sessions`;
-
-    // Optional user-supplied API key, sent as a header so the backend can use
-    // it instead of the shared server key for this session.
-    let apiKey = '';
-    if (typeof window !== 'undefined') {
-      try {
-        const raw = window.localStorage.getItem('hexagon-config');
-        if (raw) apiKey = JSON.parse(raw)?.state?.geminiApiKey || '';
-      } catch {
-        apiKey = '';
-      }
-    }
-
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
@@ -112,8 +46,7 @@ class LiveSSEManager {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { 'X-API-Key': apiKey } : {})
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(profilePayload),
         signal: controller.signal
@@ -142,20 +75,6 @@ class LiveSSEManager {
   }
 
   /**
-   * Fetch the full session (including turn history) so a freshly loaded page
-   * can re-render the last teacher turn without waiting for a new streamed one.
-   */
-  public async getSession(sessionId: string): Promise<Record<string, any> | null> {
-    try {
-      const res = await fetch(`${STREAM_BASE}/api/v1/sessions/${encodeURIComponent(sessionId)}`);
-      if (!res.ok) return null;
-      return res.json();
-    } catch {
-      return null;
-    }
-  }
-
-  /**
    * Connect to live Server-Sent Events stream:
    * http://localhost:8000/api/v1/sessions/{session_id}/stream
    */
@@ -164,7 +83,7 @@ class LiveSSEManager {
 
     this.disconnect();
 
-    const streamUrl = `${STREAM_BASE}/api/v1/sessions/${encodeURIComponent(sessionId)}/stream`;
+    const streamUrl = `${BACKEND_URL}/api/v1/sessions/${encodeURIComponent(sessionId)}/stream`;
     console.log(`[SSE] Connecting to live educator stream: ${streamUrl}`);
 
     try {
@@ -229,29 +148,21 @@ class LiveSSEManager {
     // 1. Handle Visual Intent
     const intentData = data.visual_intent || data.intent;
     if (intentData) {
-      const explicitRepresentation = intentData.representation || intentData.representation_id;
-      const representation: RepresentationId | undefined =
-        explicitRepresentation ||
-        VISUAL_TYPE_TO_REPRESENTATION[intentData.type || (data.visual_intent && data.visual_intent.type)];
-
       callbacks.onVisualIntent?.({
-        representation,
+        representation: intentData.representation || intentData.representation_id,
         scaffold_level: intentData.scaffold_level,
-        focus_target_id: intentData.focus_target_id,
-        payload: intentData.payload || intentData.title
+        focus_target_id: intentData.focus_target_id
       });
     }
 
-    // 2. Handle Teaching Turn — backend streams TeachingTurn bodies with
-    //    "spoken_text", a "visual_intent" and "state" at the top level.
-    const turnData =
-      data.teaching_turn || data.turn || (typeof data.spoken_text === 'string' ? data : data.message ? data : null);
+    // 2. Handle Teaching Turn
+    const turnData = data.teaching_turn || data.turn || (data.message ? data : null);
     if (turnData) {
       const turn: BackendTeachingTurn = {
         phase: turnData.phase,
-        message: turnData.message || turnData.spoken_text || '',
-        teacher_state: mapBackendTeacherState(turnData.teacher_state || turnData.state),
-        question: turnData.question || mapInteractivePromptToQuestion(turnData.interactive_prompt),
+        message: turnData.message || '',
+        teacher_state: turnData.teacher_state || turnData.state || 'speaking',
+        question: turnData.question || null,
         audio_url: turnData.audio_url,
         audio_base64: turnData.audio_base64
       };

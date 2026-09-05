@@ -13,7 +13,6 @@ class TeachingSession(BaseModel):
     current_state: TeachingState = TeachingState.IDLE
     current_topic: str
     material_id: Optional[str] = None
-    api_key: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     history: List[InteractionTurn] = Field(default_factory=list)
