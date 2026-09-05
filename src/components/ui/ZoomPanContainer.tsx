@@ -73,7 +73,7 @@ export default function ZoomPanContainer({ children }: { children: React.ReactNo
   };
 
   const btn =
-    'w-9 h-9 flex items-center justify-center rounded-xl bg-black/50 border border-white/10 text-white/70 hover:text-white hover:bg-white/10 backdrop-blur-md transition-all';
+    'w-9 h-9 flex items-center justify-center rounded-lg bg-white border-2 border-black text-black shadow-[2px_2px_0_#000] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none';
 
   return (
     <div
@@ -102,7 +102,7 @@ export default function ZoomPanContainer({ children }: { children: React.ReactNo
         <button title="Zoom out" className={btn} onClick={() => setZoom(clamp(zoomRef.current / 1.25, MIN_ZOOM, MAX_ZOOM))}>
           <Minus className="w-4 h-4" />
         </button>
-        <span className="min-w-12 text-center text-xs font-mono text-white/70 bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 backdrop-blur-md">
+        <span className="min-w-12 text-center text-xs font-mono text-black bg-white border-2 border-black rounded-lg px-2 py-1.5 shadow-[2px_2px_0_#000]">
           {Math.round(zoom * 100)}%
         </span>
         <button title="Zoom in" className={btn} onClick={() => setZoom(clamp(zoomRef.current * 1.25, MIN_ZOOM, MAX_ZOOM))}>
@@ -111,7 +111,7 @@ export default function ZoomPanContainer({ children }: { children: React.ReactNo
         <button title="Reset view" className={btn} onClick={resetView}>
           <RotateCcw className="w-4 h-4" />
         </button>
-        <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono text-white/40 border border-white/5 bg-black/30 backdrop-blur-md">
+        <span className="hidden lg:inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono text-white border-2 border-black bg-black shadow-[2px_2px_0_#000]">
           <Maximize2 className="w-3 h-3" /> scroll to zoom · drag to pan · double-click to reset
         </span>
       </div>

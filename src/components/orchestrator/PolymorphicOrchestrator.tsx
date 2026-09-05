@@ -33,7 +33,7 @@ export default function PolymorphicOrchestrator() {
   }
 
   return (
-    <div className="absolute inset-0 z-10 w-full h-full flex items-center justify-center overflow-hidden">
+    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
       <AnimatePresence mode="wait">
         <motion.div
           key={context.activeRepresentation}

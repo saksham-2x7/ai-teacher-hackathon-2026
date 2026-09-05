@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Clock, Upload, X, CheckCircle, Loader2, FileText, Hexagon, ArrowRight, Home } from 'lucide-react';
@@ -27,7 +27,7 @@ function topicSlug(topic: string): string {
   return s || 'lesson';
 }
 
-export default function SetupPage() {
+function SetupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setActiveTopic = useAIIntentStore(s => s.setActiveTopic);
@@ -258,5 +258,13 @@ export default function SetupPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function SetupPageWrapped() {
+  return (
+    <Suspense fallback={<div className="brut-bg h-screen w-full flex items-center justify-center"><p className="brut-card bg-white px-6 py-4 font-black font-mono text-sm">Loading…</p></div>}>
+      <SetupPage />
+    </Suspense>
   );
 }
