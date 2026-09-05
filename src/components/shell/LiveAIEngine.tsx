@@ -57,6 +57,11 @@ export default function LiveAIEngine() {
   };
 
   const scheduleQuestion = useCallback((q: QuestionProps) => {
+    // If a quiz is already on screen, swap it in immediately (no flicker).
+    if (useAIIntentStore.getState().activeQuestion) {
+      useAIIntentStore.getState().setActiveQuestion(q);
+      return;
+    }
     pendingQuestionRef.current = q;
     clearQuestionTimer();
     const delaySec = Math.min(8, Math.max(2.5, 1.5 + lastSpokenRef.current.length / 25));
@@ -120,7 +125,8 @@ export default function LiveAIEngine() {
         if (intent.payload) setVisualTitle(String(intent.payload));
       }
       if (last?.spoken_text) {
-        setTeacherState(mapBackendTeacherState(last.state), String(last.spoken_text));
+        // Backfill shows history with no live audio — idle pose, caption stays
+        setTeacherState('listening', String(last.spoken_text));
         lastSpokenRef.current = String(last.spoken_text);
       }
       if (last?.interactive_prompt) {
@@ -149,8 +155,6 @@ export default function LiveAIEngine() {
         }
         if (turn.message) {
           lastSpokenRef.current = turn.message;
-          // New teaching content — hide any question until it has been heard
-          setActiveQuestion(null);
         }
         if (turn.question === null || turn.question === undefined) {
           pendingQuestionRef.current = null;

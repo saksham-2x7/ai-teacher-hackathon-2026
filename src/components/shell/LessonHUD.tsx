@@ -75,7 +75,6 @@ export function LessonChatFooter() {
     setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', text: userMsg }]);
     setIsProcessing(true);
     setChatError(null);
-    useAIIntentStore.getState().setActiveQuestion(null);
 
     try {
       let sessionId = sessionStorage.getItem('hexagon_session_id');

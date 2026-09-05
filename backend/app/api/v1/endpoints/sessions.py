@@ -99,8 +99,12 @@ async def stream_interaction(session_id: str):
         
     async def sse_generator():
         try:
-            async for chunk in generate_teaching_turn(session_id):
-                yield f"data: {chunk}\n\n"
+            # Only generate the welcome turn on the very first connect so a page
+            # reload never duplicates content or spawns extra quizzes.
+            has_teaching = any(getattr(t, "spoken_text", None) for t in session.history)
+            if not has_teaching:
+                async for chunk in generate_teaching_turn(session_id):
+                    yield f"data: {chunk}\n\n"
             # Keep the EventSource alive with heartbeat comments so it never
             # errors out; real turns arrive via the interact stream too.
             while True:

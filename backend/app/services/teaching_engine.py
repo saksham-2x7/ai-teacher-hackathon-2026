@@ -7,6 +7,7 @@ if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
 import json
+import re
 import uuid
 from typing import AsyncGenerator, Optional
 from dotenv import load_dotenv
@@ -26,6 +27,34 @@ from core.pedagogy.engine.assembler import TeachingTurnAssembler
 
 from app.core.llm_client import generate_structured_output_async
 from app.core.config import settings
+
+# A student explicitly asking to be taught must NEVER be answered with a quiz —
+# the next turn has to be a full explanation instead.
+EXPLAIN_REQUEST = re.compile(
+    r"\b(teach|explain|teach me|don'?t know|dont know|understand|understand it"
+    r"|help|confus|clarif|again|repeat|simpler|beginner|i'?m stuck|idk|not sure"
+    r"|didn'?t get|didn'?t understand)\b",
+    re.IGNORECASE,
+)
+
+
+def is_explain_request(student_input: Optional[str]) -> bool:
+    return bool(student_input) and bool(EXPLAIN_REQUEST.search(student_input))
+
+
+def build_history_context(session, limit: int = 6) -> str:
+    """Turns the recent session history into a short Teacher/Student transcript
+    so the LLM keeps teaching forwards instead of re-asking the same thing."""
+    lines = []
+    for turn in reversed(session.history[-limit:]):
+        if getattr(turn, "student_input", None):
+            lines.append(f"Student: {turn.student_input}")
+        spoken = getattr(turn, "spoken_text", None)
+        if spoken:
+            lines.append(f"Teacher: {spoken}")
+        if len(lines) >= 2 * limit:
+            break
+    return "\n".join(reversed(lines))
 
 async def mock_generate_teaching_turn(session_id: str, student_input: Optional[str] = None) -> AsyncGenerator[str, None]:
     """
@@ -97,12 +126,19 @@ async def mock_generate_teaching_turn(session_id: str, student_input: Optional[s
 
     # 3. Assemble & Teach
     session.current_state = PedagogicalState.TEACHING
-    
+
+    transcript = build_history_context(session)
+    has_prior_teaching = any(getattr(t, "spoken_text", None) for t in session.history)
+    is_first_turn = not student_input and not has_prior_teaching
+    explain_only = is_explain_request(student_input)
+
     system_instruction = TeachingTurnAssembler.construct_llm_prompt(
         profile=profile,
         target_subject=topic,
         current_concept=topic, # Fallback to topic as concept
-        adaptive_transition=adaptive_transition
+        adaptive_transition=adaptive_transition,
+        history_context=transcript,
+        quiz_suppressed=(is_first_turn or explain_only)
     )
     
     teaching_turn = None
@@ -118,23 +154,31 @@ async def mock_generate_teaching_turn(session_id: str, student_input: Optional[s
         teaching_turn = None
 
     if not teaching_turn:
-        # Fallback teaching turn
+        # Fallback teaching turn — generic topic-based, no fake Ohm's law
         from contracts.pedagogy.models import VisualIntent, VisualIntentType
         teaching_turn = TeachingTurn(
             turn_id=str(uuid.uuid4()),
             module_id="mod_demo_01",
             concept_id=topic,
-            spoken_text=f"Let's explore {topic}. Remember that Ohm's Law states Voltage equals Current multiplied by Resistance (V = I * R).",
+            spoken_text=(
+                f"Let's take a closer look at {topic} together. "
+                f"I will break it down into simple, clear steps and check in with you as we go."
+            ),
             visual_intent=VisualIntent(
-                type=VisualIntentType.EQUATION,
-                payload="V = I * R"
+                type=VisualIntentType.TEXT,
+                payload=f"Understanding {topic}"
             )
         )
         
     # Ensure UUIDs are set
     if not teaching_turn.turn_id:
         teaching_turn.turn_id = str(uuid.uuid4())
-        
+
+    # First turn (welcome) or an explicit "teach me" request is teaching-only:
+    # never start or derail the lesson with a quiz.
+    if is_first_turn or explain_only:
+        teaching_turn.interactive_prompt = None
+
     # Safely enforce visual fallback based on policy
     teaching_turn = TeachingTurnAssembler.force_visual_intent_fallback(teaching_turn, topic)
 

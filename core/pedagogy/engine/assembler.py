@@ -21,7 +21,9 @@ class TeachingTurnAssembler:
         profile: LearnerProfile,
         target_subject: str,
         current_concept: str,
-        adaptive_transition: Optional[AdaptiveTransition] = None
+        adaptive_transition: Optional[AdaptiveTransition] = None,
+        history_context: str = "",
+        quiz_suppressed: bool = False
     ) -> str:
         """
         Builds the system prompt instructing the LLM on how to generate the TeachingTurn.
@@ -35,7 +37,19 @@ class TeachingTurnAssembler:
         
         if adaptive_transition:
             prompt += f"\nADAPTATION TRIGGERED:\nAction: {adaptive_transition.next_action}\nContext: {adaptive_transition.adaptation_context}\n"
-            
+        
+        if history_context:
+            prompt += f"\nCONVERSATION SO FAR (keep all of your teaching focused on this exact thread):\n{history_context}\n"
+        
+        prompt += f"""
+TEACHING CONDUCT (MANDATORY):
+- Every turn MUST ADD real teaching: explain one concrete, focused chunk of the current concept. Always lead with a clear explanation.
+- Only include an `interactive_prompt` (a question) AFTER you have just taught a meaningful chunk, and only to check comprehension. At most one question per turn, and never ask a question two turns in a row.
+- NEVER produce a turn that only asks a question with no teaching content.
+- Always continue and deepen the same idea from the conversation so far. Never go back and re-ask something already asked. Keep the lesson moving forward.
+- Never end the lesson after a single question — there is always more to teach next.
+{' - QUIZ SUPPRESSED THIS TURN: this turn must be pure teaching/explanation with NO interactive_prompt at all.' if quiz_suppressed else ''}
+"""
         prompt += f"\n{language_prompt}\n"
         prompt += f"\n{VISUAL_DISPATCH_PROMPT}\n"
         

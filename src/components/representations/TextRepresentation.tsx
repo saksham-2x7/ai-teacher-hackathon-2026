@@ -1,60 +1,62 @@
 'use client';
 import { RepresentationProps } from '../../types/orchestration';
 import { motion } from 'framer-motion';
-import { BookOpen, Lightbulb, Sparkles } from 'lucide-react';
 
 export default function TextRepresentation({ context }: RepresentationProps) {
-  const scaffold = context.scaffoldLevel ?? 3;
   const topic = context.topic || 'this topic';
   const title = context.visualTitle || `Understanding ${topic}`;
   const speech = context.teacherMessage;
 
   const sentences = speech
-    ? speech.split(/(?<=[.!?])\s+/).filter(Boolean).slice(0, 5)
+    ? speech.split(/(?<=[.!?])\s+/).filter(Boolean).slice(0, 6)
     : [];
 
-  const points = sentences.length >= 2 ? sentences : [
-    `We start by unpacking what ${topic} is really about.`,
-    `Step by step, we connect the core ideas together.`,
-    `Then we see ${topic} in action with a concrete example.`,
-    `Finally, you check what you have learned with a quick question.`,
-  ];
-
   return (
-    <div className="w-full h-full flex items-center justify-center bg-hexagon-dark text-foreground p-8 overflow-auto">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl w-full">
-        <div className="flex items-center gap-3 text-hexagon-accent mb-6">
-          <BookOpen size={22} />
-          <span className="font-mono text-sm tracking-widest uppercase">Learning Together</span>
+    <div className="w-full h-full flex items-center justify-center bg-black p-6 overflow-auto">
+      <motion.div
+        key={title}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="w-full max-w-2xl rounded-xl border-[3px] border-white bg-white shadow-[7px_7px_0_#fff] p-6"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <span className="brut-tag uppercase tracking-widest" style={{ background: '#00E9FF' }}>{topic}</span>
+          <span className="brut-tag uppercase tracking-widest" style={{ background: '#00FF9D' }}>Learning</span>
         </div>
 
-        <h2 className="text-3xl font-bold mb-5 tracking-tight text-white">{title}</h2>
+        <h2 className="text-2xl font-black text-black tracking-tight mb-4 leading-tight">{title}</h2>
 
-        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 space-y-4">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-hexagon-accent" /> Step by step
-          </h3>
-          {points.map((point, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.12 }}
-              className="flex gap-3 items-start"
-            >
-              <span className="w-6 h-6 shrink-0 rounded-full bg-hexagon-accent/15 text-hexagon-accent text-xs font-bold flex items-center justify-center mt-0.5">
-                {i + 1}
-              </span>
-              <p className="text-white/75 leading-relaxed">{point}</p>
-            </motion.div>
-          ))}
-        </div>
-
-        {scaffold >= 4 && (
-          <div className="mt-6 flex gap-2 items-start rounded-2xl border border-amber-400/30 bg-amber-400/5 p-4 text-sm text-amber-200/90">
-            <Lightbulb className="w-4 h-4 shrink-0 mt-0.5 text-amber-300" />
-            <span>
-              Tip: repeat each idea in your own words before moving on. If a step feels unclear, ask me and we go again.
+        {speech ? (
+          <div className="space-y-3">
+            {sentences.length > 0 ? (
+              sentences.map((sentence, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex gap-3 items-start"
+                >
+                  <span className="w-6 h-6 shrink-0 rounded-md border-2 border-black bg-black text-white text-xs font-black flex items-center justify-center mt-0.5">
+                    {i + 1}
+                  </span>
+                  <p className="text-black font-semibold leading-relaxed text-[15px]">{sentence}</p>
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-black font-semibold leading-relaxed text-[15px]">{speech}</p>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-lg border-2 border-black bg-white px-4 py-4">
+            <span className="flex gap-1">
+              <span className="w-2 h-2 bg-black rounded-full animate-bounce" />
+              <span className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:100ms]" />
+              <span className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:200ms]" />
+            </span>
+            <span className="font-mono text-xs font-black uppercase tracking-widest text-black/60">
+              teacher is writing…
             </span>
           </div>
         )}
