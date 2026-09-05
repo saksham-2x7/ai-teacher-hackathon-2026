@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useRef, useState } from 'react';
-import { Maximize2, Minus, Plus, RotateCcw } from 'lucide-react';
+import { Minus, Plus, RotateCcw } from 'lucide-react';
 
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 3;
@@ -111,9 +111,6 @@ export default function ZoomPanContainer({ children }: { children: React.ReactNo
         <button title="Reset view" className={btn} onClick={resetView}>
           <RotateCcw className="w-4 h-4" />
         </button>
-        <span className="hidden lg:inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-mono text-white border-2 border-black bg-black shadow-[2px_2px_0_#000]">
-          <Maximize2 className="w-3 h-3" /> scroll to zoom · drag to pan · double-click to reset
-        </span>
       </div>
     </div>
   );

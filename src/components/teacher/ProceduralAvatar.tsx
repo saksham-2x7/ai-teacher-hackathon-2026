@@ -281,8 +281,8 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
       const audioPhonemes = getPhonemeWeights();
       const hasExternalAudio = audioPhonemes.volume > 0.02;
 
-      // Check if currently articulating
-      const isArticulating = isSynthSpeaking || hasExternalAudio || isSpeaking;
+      // Mouths only move when there is REAL audio — no procedural fake speech
+      const isArticulating = isSynthSpeaking || hasExternalAudio;
 
       // Track each of the 15 Oculus visemes with organic co-articulation lerping
       for (const viseme of ALL_OCULUS_VISEMES) {
@@ -301,13 +301,8 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
           } else if (viseme === 'viseme_I' || viseme === 'viseme_SS') {
             target = audioPhonemes.consonant;
           }
-        } else if (isSpeaking) {
-          // Graceful procedural syllable fallback
-          const syl = Math.abs(Math.sin(t * 8) * Math.cos(t * 12));
-          if (viseme === 'viseme_aa') target = syl * 0.7;
-          if (viseme === 'viseme_O') target = Math.abs(Math.sin(t * 5)) * 0.4;
-          if (viseme === 'viseme_I') target = Math.abs(Math.cos(t * 7)) * 0.3;
         }
+        // NOTE: no teacherState-only fallback — silence = closed mouth.
 
         const current = currentVisemeWeights.current[viseme] || 0;
         const nextVal = THREE.MathUtils.lerp(current, target, delta * 26);
@@ -331,9 +326,8 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
         else targetMouthOpen = 0.22;
       } else if (hasExternalAudio) {
         targetMouthOpen = audioPhonemes.openness * 0.9;
-      } else if (isSpeaking) {
-        targetMouthOpen = Math.abs(Math.sin(t * 8) * Math.cos(t * 12)) * 0.65;
       }
+      // NOTE: no teacherState-only fallback — silence = closed mouth.
 
       smoothedMouthOpenRef.current = THREE.MathUtils.lerp(smoothedMouthOpenRef.current, targetMouthOpen, delta * 26);
       const mouthOpenIdx = dict['mouthOpen'];

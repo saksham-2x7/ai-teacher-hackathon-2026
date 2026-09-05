@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAIIntentStore } from '../../store/useAIIntentStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -9,6 +9,7 @@ import { mapBackendVisualType, mapBackendTeacherState, mapInteractivePromptToQue
 import { toFastAPILearnerProfile } from '../../utils/toFastAPILearnerProfile';
 import type { LessonPhase, RepresentationId } from '../../types/orchestration';
 import type { TeacherState } from '../../types/teacher';
+import type { QuestionProps } from '../../features/assessment/QuestionPanel';
 
 // Same-origin relative path — the Next.js proxy (/api/* -> backend) handles
 // routing, so the browser never makes a cross-site request (no CORS issues).
@@ -41,6 +42,31 @@ export default function LiveAIEngine() {
 
   const { connectAudioElement, resumeAudio } = useAudioLipSync();
   const [isLiveConnected, setIsLiveConnected] = useState(false);
+
+  // ---- Learn-first quiz gate: hold a question until the teaching message has
+  // been delivered long enough to actually be heard, then reveal it. ----
+  const lastSpokenRef = useRef('');
+  const pendingQuestionRef = useRef<QuestionProps | null>(null);
+  const questionTimerRef = useRef<number | null>(null);
+
+  const clearQuestionTimer = () => {
+    if (questionTimerRef.current !== null) {
+      window.clearTimeout(questionTimerRef.current);
+      questionTimerRef.current = null;
+    }
+  };
+
+  const scheduleQuestion = useCallback((q: QuestionProps) => {
+    pendingQuestionRef.current = q;
+    clearQuestionTimer();
+    const delaySec = Math.min(8, Math.max(2.5, 1.5 + lastSpokenRef.current.length / 25));
+    questionTimerRef.current = window.setTimeout(() => {
+      pendingQuestionRef.current = null;
+      useAIIntentStore.getState().setActiveQuestion(q);
+    }, delaySec * 1000);
+  }, []);
+
+  useEffect(() => () => clearQuestionTimer(), []);
 
   // Unlock the shared AudioContext on the first user gesture so TTS + lip-sync
   // are allowed by the browser autoplay policy.
@@ -95,17 +121,18 @@ export default function LiveAIEngine() {
       }
       if (last?.spoken_text) {
         setTeacherState(mapBackendTeacherState(last.state), String(last.spoken_text));
+        lastSpokenRef.current = String(last.spoken_text);
       }
       if (last?.interactive_prompt) {
         const q = mapInteractivePromptToQuestion(last.interactive_prompt);
-        if (q) setActiveQuestion(q);
+        if (q) scheduleQuestion(q);
       }
     }).catch(() => {});
 
     return () => {
       cancelled = true;
     };
-  }, [sessionId, setRepresentation, setVisualTitle, setTeacherState, setActiveQuestion]);
+  }, [sessionId, setRepresentation, setVisualTitle, setTeacherState, setActiveQuestion, scheduleQuestion]);
 
   // Live SSE Backend Stream Connection
   useEffect(() => {
@@ -120,8 +147,17 @@ export default function LiveAIEngine() {
         if (turn.teacher_state) {
           setTeacherState(turn.teacher_state, turn.message);
         }
-        if (turn.question !== undefined) {
-          setActiveQuestion(turn.question);
+        if (turn.message) {
+          lastSpokenRef.current = turn.message;
+          // New teaching content — hide any question until it has been heard
+          setActiveQuestion(null);
+        }
+        if (turn.question === null || turn.question === undefined) {
+          pendingQuestionRef.current = null;
+          clearQuestionTimer();
+          setActiveQuestion(null);
+        } else {
+          scheduleQuestion(turn.question);
         }
 
         // Dynamic TTS through the same-origin proxy
@@ -131,7 +167,12 @@ export default function LiveAIEngine() {
           const audioEl = new Audio(audioUrl);
           audioEl.crossOrigin = 'anonymous';
           connectAudioElement(audioEl);
-          audioEl.play().catch(e => console.warn("[LiveAIEngine] Audio autoplay deferred:", e));
+          audioEl.addEventListener('play', () => setTeacherState('speaking', turn.message));
+          audioEl.addEventListener('ended', () => setTeacherState('listening', turn.message));
+          audioEl.play().catch(e => {
+            console.warn("[LiveAIEngine] Audio autoplay deferred:", e);
+            setTeacherState('listening', turn.message);
+          });
         }
       },
       onVisualIntent: (intent) => {
@@ -141,6 +182,7 @@ export default function LiveAIEngine() {
       },
       onAudioReady: (audioEl) => {
         connectAudioElement(audioEl);
+        audioEl.addEventListener('ended', () => setTeacherState('listening', ''));
       },
       onError: () => {
         setIsLiveConnected(false);
