@@ -34,19 +34,19 @@ export default function AITeacherPiP() {
 
   return (
     <div className="w-full flex flex-col gap-3">
-      {/* Captions */}
+      {/* Captions — clamped so the avatar card below always stays visible */}
       {showCaptions && captionText && (
-        <div className="rounded-xl border-[3px] border-black bg-white p-4 shadow-[5px_5px_0_#000]">
+        <div className="shrink-0 rounded-xl border-[3px] border-black bg-white p-4 shadow-[5px_5px_0_#000]">
           <div className="w-full h-1.5 bg-[#00FF9D] mb-3" />
-          <p className="text-black text-sm leading-relaxed font-bold">
+          <p className="text-black text-sm leading-relaxed font-bold line-clamp-5">
             “{captionText}”
           </p>
         </div>
       )}
 
-      {/* Avatar card — fixed height, brutal frame, lives in the rail (no overlap) */}
+      {/* Avatar card — pinned, stays on screen no matter the caption length */}
       <div
-        className="w-full rounded-xl border-[3px] border-black shadow-[7px_7px_0_#000] bg-white overflow-hidden flex flex-col"
+        className="w-full rounded-xl border-[3px] border-black shadow-[7px_7px_0_#000] bg-white overflow-hidden flex flex-col shrink-0 mt-auto"
         style={{ height: isExpanded ? 400 : 260 }}
       >
         <div className="bg-black flex flex-col w-full h-full relative">

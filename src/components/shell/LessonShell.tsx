@@ -42,8 +42,8 @@ export default function LessonShell({ children }: { children: ReactNode }) {
           </AnimatePresence>
         </div>
 
-        {/* Avatar rail */}
-        <div data-slot="rail" className="w-80 xl:w-96 shrink-0 min-h-0 flex flex-col overflow-y-auto">
+        {/* Avatar rail — captions scroll inside, avatar never hidden */}
+        <div data-slot="rail" className="w-80 xl:w-96 shrink-0 min-h-0 flex flex-col overflow-hidden">
           <AITeacherPiP />
         </div>
       </div>

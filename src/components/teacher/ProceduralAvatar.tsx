@@ -325,7 +325,7 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
         else if (activeCue.viseme === 'viseme_PP' || activeCue.viseme === 'viseme_sil') targetMouthOpen = 0;
         else targetMouthOpen = 0.22;
       } else if (hasExternalAudio) {
-        targetMouthOpen = audioPhonemes.openness * 0.9;
+        targetMouthOpen = Math.min(audioPhonemes.openness * 0.9 + audioPhonemes.volume * 0.4, 1.0);
       }
       // NOTE: no teacherState-only fallback — silence = closed mouth.
 
@@ -355,7 +355,7 @@ function AvatarModel({ lookAtBoard = false, pointAtBoard = false }: ProceduralAv
       if (jawRef.current) {
         jawRef.current.rotation.x = THREE.MathUtils.lerp(
           jawRef.current.rotation.x,
-          smoothedMouthOpenRef.current * 0.08,
+          smoothedMouthOpenRef.current * 0.14,
           delta * 20
         );
       }

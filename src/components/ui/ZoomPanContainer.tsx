@@ -1,6 +1,5 @@
 'use client';
-import { useCallback, useRef, useState } from 'react';
-import { Minus, Plus, RotateCcw } from 'lucide-react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 
 const MIN_ZOOM = 0.4;
 const MAX_ZOOM = 3;
@@ -10,26 +9,20 @@ function clamp(v: number, min: number, max: number) {
 }
 
 /**
- * Mouse-wheel zoom (to cursor), pointer-drag pan, double-click reset,
- * and +/-/reset controls — wraps any teaching visual.
+ * Mouse-wheel zoom (to cursor), pointer-drag pan, double-click reset.
+ * No visible controls — the stage is always clean.
  */
-export default function ZoomPanContainer({ children }: { children: React.ReactNode }) {
+export default function ZoomPanContainer({ children }: { children: ReactNode }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
   const dragRef = useRef({ startX: 0, startY: 0, panX: 0, panY: 0, active: false });
 
-  const [zoom, setZoomState] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
-
-  const setZoom = (v: number) => {
-    zoomRef.current = v;
-    setZoomState(v);
-  };
 
   const resetView = () => {
     panRef.current = { x: 0, y: 0 };
-    setZoom(1);
+    zoomRef.current = 1;
   };
 
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -42,10 +35,9 @@ export default function ZoomPanContainer({ children }: { children: React.ReactNo
     const my = e.clientY - (rect?.top ?? 0);
     const ratio = next / zoomRef.current;
 
-    // Keep the point under the cursor stationary while zooming
     panRef.current.x = mx - (mx - panRef.current.x) * ratio;
     panRef.current.y = my - (my - panRef.current.y) * ratio;
-    setZoom(next);
+    zoomRef.current = next;
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -67,19 +59,16 @@ export default function ZoomPanContainer({ children }: { children: React.ReactNo
     panRef.current.y = drag.panY + (e.clientY - drag.startY);
   };
 
-  const endDrag = () => {
+  const endDrag = useCallback(() => {
     dragRef.current.active = false;
     setIsDragging(false);
-  };
-
-  const btn =
-    'w-9 h-9 flex items-center justify-center rounded-lg bg-white border-2 border-black text-black shadow-[2px_2px_0_#000] transition-all hover:translate-x-[-1px] hover:translate-y-[-1px] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none';
+  }, []);
 
   return (
     <div
       ref={boxRef}
-      className="relative w-full h-full overflow-hidden select-none"
-      style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+      className="relative w-full h-full overflow-hidden select-none cursor-grab active:cursor-grabbing"
+      style={{ touchAction: 'none' }}
       onWheel={onWheel}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -90,27 +79,11 @@ export default function ZoomPanContainer({ children }: { children: React.ReactNo
       <div
         className="absolute inset-0 origin-top-left"
         style={{
-          transform: `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoom})`,
+          transform: `translate(${panRef.current.x}px, ${panRef.current.y}px) scale(${zoomRef.current})`,
           transformOrigin: '0 0'
         }}
       >
         {children}
-      </div>
-
-      {/* Zoom controls */}
-      <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
-        <button title="Zoom out" className={btn} onClick={() => setZoom(clamp(zoomRef.current / 1.25, MIN_ZOOM, MAX_ZOOM))}>
-          <Minus className="w-4 h-4" />
-        </button>
-        <span className="min-w-12 text-center text-xs font-mono text-black bg-white border-2 border-black rounded-lg px-2 py-1.5 shadow-[2px_2px_0_#000]">
-          {Math.round(zoom * 100)}%
-        </span>
-        <button title="Zoom in" className={btn} onClick={() => setZoom(clamp(zoomRef.current * 1.25, MIN_ZOOM, MAX_ZOOM))}>
-          <Plus className="w-4 h-4" />
-        </button>
-        <button title="Reset view" className={btn} onClick={resetView}>
-          <RotateCcw className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );

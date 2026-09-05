@@ -14,18 +14,41 @@ let sharedAudioContext: AudioContext | null = null;
 let sharedAnalyser: AnalyserNode | null = null;
 let sharedDataArray: Uint8Array | null = null;
 let sharedConnectedSource: AudioNode | null = null;
+let gestureResumeInstalled = false;
+
+/**
+ * Autoplay-policy killer: the TTS turns resolve AFTER the click (fetch + SSE
+ * round-trips), so a resume() called then is no longer a user gesture and the
+ * AudioContext stays suspended forever -> analyser reads zeros -> no lip-sync.
+ * Install one-shot global gesture listeners that resume the context the
+ * instant the user touches/keys/clicks anywhere.
+ */
+function installGestureResume() {
+  if (typeof window === 'undefined' || gestureResumeInstalled) return;
+  gestureResumeInstalled = true;
+  const resume = () => {
+    if (sharedAudioContext && sharedAudioContext.state === 'suspended') {
+      sharedAudioContext.resume().catch(() => {});
+    }
+  };
+  ['pointerdown', 'pointerup', 'touchend', 'keydown', 'mousedown'].forEach((t) => {
+    window.addEventListener(t, resume, { passive: true });
+  });
+}
 
 function getOrCreateAudioContext(): { ctx: AudioContext; analyser: AnalyserNode; dataArray: Uint8Array } {
   if (typeof window === 'undefined') {
     throw new Error('AudioContext is only available in browser environments');
   }
 
+  installGestureResume();
+
   if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     sharedAudioContext = new AudioCtx();
     sharedAnalyser = sharedAudioContext.createAnalyser();
-    sharedAnalyser.fftSize = 64; // 32 frequency bins: lightweight & high-speed for 60fps reads
-    sharedAnalyser.smoothingTimeConstant = 0.45; // Natural speech momentum
+    sharedAnalyser.fftSize = 256; // 128 frequency bins: fine-grained speech formants for believable lip-sync
+    sharedAnalyser.smoothingTimeConstant = 0.55; // Natural speech momentum
     sharedDataArray = new Uint8Array(sharedAnalyser.frequencyBinCount);
   }
 
@@ -97,24 +120,27 @@ export function useAudioLipSync() {
     // @ts-expect-error : strict dom lib mismatch
     analyser.getByteFrequencyData(dataArray);
 
-    // Frequency bands (with fftSize = 64, sampling ~44.1kHz -> ~689Hz per bin)
-    // Bin 0-3: 0 - 2.5kHz (Low / Vowel fundamental & Formant 1: A, E, O open jaw)
-    // Bin 4-10: 2.5kHz - 7kHz (Mid Formants: lip rounding, tongue position)
-    // Bin 11-31: 7kHz - 22kHz (High sibilants: S, T, CH, F consonants)
+    // Frequency bands (fftSize = 256, ~44.1kHz -> ~172Hz per bin, 128 bins total)
+    // Bin 0-5:   0 - 1.0kHz  (Low / Vowel fundamental & Formant 1: A, E, O open jaw)
+    // Bin 6-20:  1.0 - 3.6kHz (Mid Formants 2-3: lip rounding, tongue position)
+    // Bin 21-127: 3.6 - 22kHz  (High sibilants: S, T, CH, F consonants)
+    const len = dataArray.length;
+    const lowEnd = Math.min(6, len);
+    const midEnd = Math.min(21, len);
+
     let lowSum = 0;
     let midSum = 0;
     let highSum = 0;
-    let totalSum = 0;
 
-    for (let i = 0; i < 4; i++) lowSum += dataArray[i];
-    for (let i = 4; i < 11; i++) midSum += dataArray[i];
-    for (let i = 11; i < 32; i++) highSum += dataArray[i];
-    totalSum = lowSum + midSum + highSum;
+    for (let i = 0; i < lowEnd; i++) lowSum += dataArray[i];
+    for (let i = lowEnd; i < midEnd; i++) midSum += dataArray[i];
+    for (let i = midEnd; i < len; i++) highSum += dataArray[i];
+    const totalSum = lowSum + midSum + highSum;
 
-    const volume = Math.min((totalSum / (32 * 255)) * 2.5, 1.0);
-    const openness = Math.min((lowSum / (4 * 255)) * 2.2, 1.0);
-    const rounded = Math.min((midSum / (7 * 255)) * 2.0, 1.0);
-    const consonant = Math.min((highSum / (21 * 255)) * 2.5, 1.0);
+    const volume = Math.min((totalSum / (len * 255)) * 3.0, 1.0);
+    const openness = Math.min((lowSum / (lowEnd * 255)) * 2.4, 1.0);
+    const rounded = Math.min((midSum / ((midEnd - lowEnd) * 255)) * 2.2, 1.0);
+    const consonant = Math.min((highSum / ((len - midEnd) * 255)) * 3.0, 1.0);
 
     // Noise gate threshold
     if (volume < 0.02) {
@@ -125,15 +151,21 @@ export function useAudioLipSync() {
   }, []);
 
   /**
-   * Connect an HTML Audio or Video element directly into the analyser
+   * Connect an HTML Audio or Video element directly into the analyser.
+   * createMediaElementSource may only be called ONCE per element — reuse a
+   * cached source so repeated connects never throw before audio starts.
    */
   const connectAudioElement = useCallback((element: HTMLMediaElement) => {
     try {
       const { ctx, analyser } = getOrCreateAudioContext();
-      if (sharedConnectedSource) {
+      type SourceElement = HTMLMediaElement & { __lipSyncSource?: MediaElementAudioSourceNode };
+      const cached = (element as SourceElement).__lipSyncSource;
+      const source: MediaElementAudioSourceNode =
+        cached && cached.context === ctx ? cached : ctx.createMediaElementSource(element);
+      (element as SourceElement).__lipSyncSource = source;
+      if (sharedConnectedSource && sharedConnectedSource !== source) {
         try { sharedConnectedSource.disconnect(); } catch {}
       }
-      const source = ctx.createMediaElementSource(element);
       source.connect(analyser);
       analyser.connect(ctx.destination);
       sharedConnectedSource = source;
